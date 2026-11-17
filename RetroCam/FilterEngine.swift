@@ -107,7 +107,9 @@ final class FilterEngine: @unchecked Sendable {
         }
 
         // 10. Grana
-        if r.grain > 0 { img = grain(img, amount: r.grain, size: r.grainSize, color: r.grainColor, ext: ext) }
+        if r.grain > 0 {
+            img = grain(img, amount: r.grain, size: r.grainSize, color: r.grainColor, streaks: r.grainStreaks, ext: ext)
+        }
 
         // 11. Polvere e graffi (sopra la grana: sono sulla superficie del negativo)
         if r.dust > 0 { img = dust(img, amount: r.dust, ext: ext, s: s, variation: variation) }
@@ -147,8 +149,10 @@ final class FilterEngine: @unchecked Sendable {
         // Soggetto: più luce, hotspot centrale, pelle ammorbidita
         var subject = img.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: f.subjectEV])
         if f.hotspot > 0 {
+            // La somma raddoppia anche l'alfa (1+1): va riportato a 1, altrimenti i filtri successivi dimezzano i colori
             subject = scaleRGB(weight, SIMD3(repeating: f.hotspot * 0.35))
                 .applyingFilter("CIAdditionCompositing", parameters: [kCIInputBackgroundImageKey: subject])
+                .settingAlphaOne(in: ext)
         }
         if f.skinSmoothing > 0 {
             let soft = blurred(subject, sigma: CGFloat(3 * s))
@@ -269,6 +273,7 @@ final class FilterEngine: @unchecked Sendable {
             let specks = noise
                 .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
                 .transformed(by: CGAffineTransform(translationX: dx, y: dy))
+                .cropped(to: ext).settingAlphaOne(in: ext)      // alfa del rumore casuale → opaco
                 .applyingFilter("CIColorMatrix", parameters: [
                     "inputRVector": CIVector(x: k, y: 0, z: 0, w: 0),
                     "inputGVector": CIVector(x: k, y: 0, z: 0, w: 0),
@@ -333,10 +338,14 @@ final class FilterEngine: @unchecked Sendable {
         return band.composited(over: img)
     }
 
-    private func grain(_ img: CIImage, amount: Float, size: Float, color: Bool, ext: CGRect) -> CIImage {
+    private func grain(_ img: CIImage, amount: Float, size: Float, color: Bool, streaks: Bool, ext: CGRect) -> CIImage {
         guard var noise = CIFilter.randomGenerator().outputImage else { return img }
-        if size > 1 { noise = noise.transformed(by: CGAffineTransform(scaleX: CGFloat(size), y: CGFloat(size))) }
+        // Nastro: il rumore si allunga in orizzontale (strisce), non è tondo come la grana della pellicola
+        let sx = CGFloat(max(size, 1)) * (streaks ? 5 : 1), sy = CGFloat(max(size, 1))
+        if sx > 1 || sy > 1 { noise = noise.transformed(by: CGAffineTransform(scaleX: sx, y: sy)) }
         noise = noise.transformed(by: CGAffineTransform(translationX: .random(in: 0...512), y: .random(in: 0...512)))
+        // Il rumore ha anche l'alfa casuale: va reso opaco prima dei filtri di colore, che altrimenti lo "dividono"
+        noise = noise.cropped(to: ext).settingAlphaOne(in: ext)
         // I grani grossi si sfocano appena: la pellicola vera ha "grumi", non pixel casuali
         let clumpy = size > 1.6
         let a = CGFloat(min(1, amount * 2.5 * (clumpy ? 1.35 : 1)))
@@ -363,6 +372,11 @@ final class FilterEngine: @unchecked Sendable {
             let text = "’" + yearFmt.string(from: Date())
             let st = stamp(text, color: UIColor(red: 1, green: 0.55, blue: 0.12, alpha: 1), size: ext.width * 0.05, glow: .orange)
             return place(st, in: ext, right: true, top: false, margin: ext.width * 0.03, over: img)
+        case .instantDate:
+            // Data arancione impressa nella foto, in basso a sinistra (la cornice viene aggiunta dopo)
+            let text = "’" + yearFmt.string(from: Date())
+            let st = stamp(text, color: UIColor(red: 1, green: 0.55, blue: 0.12, alpha: 1), size: ext.width * 0.045, glow: .orange)
+            return place(st, in: ext, right: false, top: false, margin: ext.width * 0.03, over: img)
         case .camcorder:
             let size = ext.width * 0.045
             let blink = Int(time * 1.5) % 2 == 0
@@ -435,13 +449,14 @@ final class FilterEngine: @unchecked Sendable {
 
     /// Cornice di carta: grana della carta, sottile ombra attorno alla foto e data scritta a mano nel bordo largo.
     private func instantFrame(_ img: CIImage, ext: CGRect) -> CIImage {
-        let w = ext.width, border = w * 0.07, bottom = w * 0.22
+        let w = ext.width, border = w * 0.035, bottom = w * 0.11
         let canvas = CGRect(x: 0, y: 0, width: w + 2 * border, height: ext.height + border + bottom)
         var paper = CIImage(color: CIColor(red: 0.96, green: 0.945, blue: 0.91)).cropped(to: canvas)
 
         if let n = CIFilter.randomGenerator().outputImage {
             let a: CGFloat = 0.05
             let tex = n.transformed(by: CGAffineTransform(scaleX: 1.6, y: 1.6))
+                .cropped(to: canvas).settingAlphaOne(in: canvas)
                 .applyingFilter("CIColorMatrix", parameters: [
                     "inputRVector": CIVector(x: a, y: 0, z: 0, w: 0),
                     "inputGVector": CIVector(x: a, y: 0, z: 0, w: 0),
@@ -457,13 +472,6 @@ final class FilterEngine: @unchecked Sendable {
         let edge = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0.22))
             .cropped(to: photo.insetBy(dx: -t, dy: -t))
         paper = edge.composited(over: paper)
-
-        // Data a mano, leggermente storta, nel bordo largo
-        let note = stamp(handFmt.string(from: Date()), color: UIColor(white: 0.25, alpha: 0.85), size: w * 0.05, glow: nil, hand: true)
-            .transformed(by: CGAffineTransform(rotationAngle: -0.035))
-        let nx = (canvas.width - note.extent.width) / 2 - note.extent.minX
-        let ny = bottom * 0.28 - note.extent.minY
-        paper = note.transformed(by: CGAffineTransform(translationX: nx, y: ny)).composited(over: paper)
 
         return img.transformed(by: CGAffineTransform(translationX: border - ext.minX, y: bottom - ext.minY))
             .composited(over: paper)
@@ -508,6 +516,13 @@ final class FilterEngine: @unchecked Sendable {
         x <= knee ? x : knee + (1 - knee) * tanh((x - knee) / (1 - knee))
     }
 
+    private func contrastCurve(_ x: Float, _ k: Float) -> Float {
+        if k <= 1 { return (x - 0.5) * k + 0.5 }
+        let v = min(max(x, 0), 1)
+        let smooth = v * v * (3 - 2 * v)
+        return v + (smooth - v) * min(1, (k - 1) * 2.5)
+    }
+
     /// Calcolo per singolo canale con soli Float: evita operatori SIMD ambigui e lento type-checking.
     private func tone(_ c0: SIMD3<Float>, _ r: CameraRecipe) -> SIMD3<Float> {
         // Esposizione e bilanciamento del bianco in lineare
@@ -531,11 +546,11 @@ final class FilterEngine: @unchecked Sendable {
             blue = roll(blue, knee)
         }
 
-        // Contrasto
+        // Contrasto: curva a S morbida sopra 1 (niente clipping brusco), lineare sotto 1
         let contrast: Float = r.contrast
-        red = (red - 0.5) * contrast + 0.5
-        green = (green - 0.5) * contrast + 0.5
-        blue = (blue - 0.5) * contrast + 0.5
+        red = contrastCurve(red, contrast)
+        green = contrastCurve(green, contrast)
+        blue = contrastCurve(blue, contrast)
 
         // Saturazione
         let l0: Float = luma(red, green, blue)

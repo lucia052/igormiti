@@ -10,10 +10,6 @@ struct CameraPickerSheet: View {
     @AppStorage("saveOriginal") private var saveOriginal = false
     @AppStorage("soundEnabled") private var soundEnabled = true
 
-    @State private var lookPrompt = ""
-    @State private var isGenerating = false
-    @State private var lookError: String?
-
     var body: some View {
         NavigationStack {
             List {
@@ -23,7 +19,6 @@ struct CameraPickerSheet: View {
                             .buttonStyle(.plain)
                     }
                 }
-                lookSection
                 Section("Scatto") {
                     Toggle("Griglia dei terzi", isOn: $gridEnabled)
                     Toggle("Salva anche l'originale", isOn: $saveOriginal)
@@ -36,7 +31,7 @@ struct CameraPickerSheet: View {
                 Section {
                     LabeledContent("Versione", value: appVersion)
                 } footer: {
-                    Text("Tocca il mirino per mettere a fuoco, poi trascina in verticale per regolare l'esposizione. Pizzica per fare zoom.")
+                    Text("Tocca il mirino per mettere a fuoco, poi trascina in verticale per regolare l'esposizione. Pizzica per fare zoom: gli obiettivi veri del telefono, poi lo zoom digitale.")
                 }
             }
             .navigationTitle("Fotocamere")
@@ -54,55 +49,6 @@ struct CameraPickerSheet: View {
         .onChange(of: ringEnabled) { _, _ in Haptics.shared.selection() }
         .onChange(of: gridEnabled) { _, _ in Haptics.shared.selection() }
         .onChange(of: saveOriginal) { _, _ in Haptics.shared.selection() }
-    }
-
-    // MARK: Look con AI
-    private var lookSection: some View {
-        Section {
-            if camera.recipe.isCustom {
-                Button { dismiss() } label: { row(camera.recipe) }
-                    .buttonStyle(.plain)
-            }
-            TextField("Es. tramonto estivo con ombre viola", text: $lookPrompt, axis: .vertical)
-                .lineLimit(1...3)
-                .disabled(isGenerating)
-            Button(action: generateLook) {
-                HStack {
-                    Label("Crea look", systemImage: "sparkles")
-                    if isGenerating { Spacer(); ProgressView() }
-                }
-            }
-            .disabled(isGenerating || lookPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                      || LookGenerator.unavailableReason != nil)
-            if let message = lookError ?? LookGenerator.unavailableReason {
-                Text(message).font(.footnote).foregroundStyle(.secondary)
-            }
-        } header: {
-            Text("Look con AI")
-        } footer: {
-            Text("Descrivi uno stile: l'AI sul dispositivo regola colori e ottica della fotocamera scelta. Nessun dato lascia il telefono.")
-        }
-    }
-
-    private func generateLook() {
-        let text = lookPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        // Parte sempre da una delle fotocamere: un nuovo look sostituisce quello precedente
-        let baseID = camera.recipe.baseID ?? camera.recipe.id
-        let base = CameraRecipe.all.first { $0.id == baseID } ?? .g7x
-        isGenerating = true
-        lookError = nil
-        Task {
-            do {
-                camera.recipe = try await LookGenerator.generate(prompt: text, base: base)
-                Haptics.shared.success()
-                dismiss()
-            } catch {
-                lookError = (error as? LookGenerator.LookError)?.errorDescription
-                    ?? "Non sono riuscito a creare il look. Riprova con una descrizione diversa."
-            }
-            isGenerating = false
-        }
     }
 
     private var appVersion: String {
