@@ -29,6 +29,8 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
     @Published var livePhotoSupported = false       // l'obiettivo attivo permette le Live Photo
     @Published var manualFocus = false
+    @Published var manualFocusSupported = true      // l'obiettivo attivo permette di bloccare il fuoco su una posizione
+    @Published var isFocusing = false               // l'autofocus sta cercando il fuoco dopo un tocco
     @Published var lensPosition: Float = 0.6        // 0 = vicino ... 1 = infinito
     @Published var maxDiopters: Float = 10          // da minimumFocusDistance
     @Published var zoom: CGFloat = 1
@@ -77,6 +79,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
     private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?   // angolo di scatto secondo la posizione del telefono
     private var rotationDeviceID: String?
+    private var focusObservation: NSKeyValueObservation?   // segue isAdjustingFocus del dispositivo attivo
 
     // Protetti da stateLock (letti anche dalla coda video)
     private let stateLock = NSLock()
@@ -254,6 +257,10 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     private func publishDeviceInfo(_ dev: AVCaptureDevice) {
+        // Il fuoco manuale richiede una lente con autofocus: le frontali più vecchie sono a fuoco fisso
+        let canLock = dev.isLockingFocusWithCustomLensPositionSupported
+            || (dev.isVirtualDevice && dev.constituentDevices.contains { $0.isLockingFocusWithCustomLensPositionSupported })
+        DispatchQueue.main.async { self.manualFocusSupported = canLock }
         let minFocus = dev.minimumFocusDistance          // mm, -1 se sconosciuto
         let diopters: Float = minFocus > 0 ? 1000 / Float(minFocus) : 10
         DispatchQueue.main.async { self.maxDiopters = diopters }
@@ -570,12 +577,22 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
                     if d.isSmoothAutoFocusSupported { d.isSmoothAutoFocusEnabled = true }                  // la lente si sposta senza scatti
                     d.focusPointOfInterest = target
                     d.focusMode = .autoFocus
+                    // Stato della ricerca del fuoco: l'interfaccia mostra "sto cercando" e poi "fuoco bloccato"
+                    focusObservation = d.observe(\.isAdjustingFocus, options: [.new]) { [weak self] device, change in
+                        let adjusting = change.newValue ?? device.isAdjustingFocus
+                        DispatchQueue.main.async { self?.isFocusing = adjusting }
+                    }
                 }
                 if d.isExposurePointOfInterestSupported { d.exposurePointOfInterest = target; d.exposureMode = .continuousAutoExposure }
-                d.isSubjectAreaChangeMonitoringEnabled = true
+                // L'autofocus automatico NON deve riprendere il comando e riportare il fuoco al centro quando la scena cambia:
+                // il fuoco resta esattamente dove hai toccato, finché non tocchi un altro punto o torni all'automatico (tasto AF).
+                d.isSubjectAreaChangeMonitoringEnabled = false
             } catch { }
         }
     }
+
+    /// Torna all'autofocus continuo al centro (tocco sul segmento AF quando è già selezionato).
+    func resumeAutoFocus() { resetToContinuous() }
 
     /// Quando la scena cambia dopo un tap-to-focus, torna all'autofocus continuo al centro.
     private func resetToContinuous() {

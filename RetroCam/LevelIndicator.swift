@@ -5,6 +5,8 @@ import CoreMotion
 final class LevelMotion: ObservableObject {
     @Published var angle: Double = 0
     @Published var isFlat = false
+    /// Orientamento dell'interfaccia: in orizzontale l'asse "su" del telefono cambia e l'inclinazione va calcolata di conseguenza.
+    var orientation: UIInterfaceOrientation = .portrait
 
     private let manager = CMMotionManager()
 
@@ -15,7 +17,14 @@ final class LevelMotion: ObservableObject {
             guard let self, let g = motion?.gravity else { return }
             // Telefono quasi orizzontale (piatto): l'orizzonte non ha senso
             let flat = abs(g.z) > 0.8
-            let raw = atan2(g.x, -g.y) * 180 / .pi
+            var raw = atan2(g.x, -g.y) * 180 / .pi          // verticale: gravità lungo -y
+            // Orizzontale: il telefono è ruotato di ±90°, quindi si toglie quella rotazione
+            switch self.orientation {
+            case .landscapeRight: raw += 90                  // tasto home a destra (telefono ruotato in senso antiorario)
+            case .landscapeLeft:  raw -= 90
+            default: break
+            }
+            if raw > 180 { raw -= 360 } else if raw < -180 { raw += 360 }
             // Media mobile: toglie il tremolio senza ritardare troppo
             self.angle = self.angle * 0.75 + raw * 0.25
             if self.isFlat != flat { self.isFlat = flat }
@@ -27,6 +36,7 @@ final class LevelMotion: ObservableObject {
 
 /// Orizzonte artificiale: una linea che resta orizzontale e diventa gialla quando sei in bolla.
 struct LevelIndicator: View {
+    var orientation: UIInterfaceOrientation = .portrait
     @StateObject private var motion = LevelMotion()
 
     var body: some View {
@@ -42,7 +52,8 @@ struct LevelIndicator: View {
         .opacity(motion.isFlat ? 0 : 1)
         .animation(.easeOut(duration: 0.15), value: isLevel)
         .onChange(of: isLevel) { _, level in if level && !motion.isFlat { Haptics.shared.levelAligned() } }
-        .onAppear { motion.start() }
+        .onAppear { motion.orientation = orientation; motion.start() }
+        .onChange(of: orientation) { _, new in motion.orientation = new }
         .onDisappear { motion.stop() }
         .allowsHitTesting(false)
         .accessibilityHidden(true)

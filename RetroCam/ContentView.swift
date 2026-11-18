@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var pinchBase: CGFloat?
     @State private var thumbPop = false
     @State private var interfaceOrientation: UIInterfaceOrientation = .portrait
+    @State private var focusConfirmed = true           // fuoco automatico bloccato dopo l'ultimo tocco
+    @State private var focusToken = UUID()
     @State private var focusSelection = false          // AF/MF mostrato: cambia subito, l'obiettivo si adegua dopo
     @Namespace private var focusNamespace
 
@@ -101,7 +103,7 @@ struct ContentView: View {
                 GridOverlay().ignoresSafeArea().allowsHitTesting(false)
             }
             // Livella (bilanciamento): indica se la foto è dritta; si attiva dal suo pulsante, indipendente dalla griglia
-            if levelEnabled && !isLandscape { LevelIndicator() }
+            if levelEnabled { LevelIndicator(orientation: interfaceOrientation) }
             if isLandscape { landscapeLayer } else { topLayer }
 
             focusRing
@@ -127,14 +129,19 @@ struct ContentView: View {
                 ViewfinderLayer(preview: camera.preview,
                                 pixelated: camera.recipe.pixelated,
                                 square: camera.recipe.cropSquare)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipped()
+            // Il riquadro sta in un overlay del contenitore a dimensione schermo, NON dentro lo ZStack dell'immagine:
+            // con scaledToFill l'immagine è più larga dello schermo e lo ZStack interno lo è con lei, quindi `position`
+            // veniva misurato da un'origine spostata (a sinistra di metà dell'eccedenza) rispetto al punto toccato.
+            .overlay {
                 if let p = tapPoint, !camera.manualFocus {
-                    FocusReticle(bias: camera.exposureBias)
+                    FocusReticle(bias: camera.exposureBias, searching: !focusConfirmed)
                         .position(p)
                         .transition(.scale(scale: 1.4).combined(with: .opacity))
                 }
             }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .clipped()
             .contentShape(Rectangle())
             .gesture(SpatialTapGesture().onEnded { v in focusTap(at: v.location, in: geo.size) })
             .simultaneousGesture(exposureDrag)
@@ -179,7 +186,7 @@ struct ContentView: View {
         guard !camera.manualFocus, let img = camera.preview.image else { return }
         // Il riquadro scivola con una molla verso il nuovo punto (e si restringe, come nell'app Fotocamera)
         withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) { tapPoint = p }
-        Haptics.shared.focusLock(); SoundFX.shared.focusBeep()
+        focusConfirmed = false     // la conferma (nessun suono né aptico) arriva quando il fuoco è davvero bloccato
 
         // Punto dentro l'immagine mostrata: riempie lo schermo (ritaglia i bordi), la Polaroid quadrata sta intera
         let iw = CGFloat(img.width), ih = CGFloat(img.height)
@@ -205,7 +212,23 @@ struct ContentView: View {
         default:              point = CGPoint(x: v, y: front ? u : 1 - u)
         }
         camera.focus(atDevicePoint: point)
+        confirmFocus()
         scheduleReticleHide()
+    }
+
+    /// Aspetta che l'autofocus finisca di cercare (max ~2,5 s) e solo allora conferma: il riquadro diventa giallo (nessun suono né aptico).
+    private func confirmFocus() {
+        let token = UUID()
+        focusToken = token
+        Task {
+            try? await Task.sleep(for: .milliseconds(250))          // il tempo che la ricerca parta
+            var waited = 0
+            while camera.isFocusing && waited < 40 && focusToken == token {
+                try? await Task.sleep(for: .milliseconds(50)); waited += 1
+            }
+            guard focusToken == token, tapPoint != nil else { return }
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) { focusConfirmed = true }
+        }
     }
 
     private func scheduleReticleHide() {
@@ -526,7 +549,7 @@ struct ContentView: View {
                     VStack(spacing: 14) {
                         flashButton
                         timerButton
-                        gridButton
+                        levelButton
                         liveButton
                         flipButton
                     }
@@ -571,12 +594,24 @@ struct ContentView: View {
         .accessibilityLabel("Messa a fuoco")
     }
 
-    /// Il fuoco manuale c'è solo sulla posteriore e con la ghiera attiva nelle impostazioni. Il selettore resta sempre visibile:
-    /// altrimenti, sulla frontale o con la ghiera spenta, sembra che sia sparito.
-    private var canFocusManually: Bool { ringEnabled && !camera.isFront }
+    /// Il fuoco manuale c'è, anche sulla frontale, se la ghiera è attiva nelle impostazioni. Se la lente è a fuoco fisso
+    /// (frontali più vecchie) il tocco su MF avvisa invece di non fare nulla.
+    private var canFocusManually: Bool { ringEnabled }
 
     private func setFocus(manual on: Bool) {
+        // Già in AF e tocchi AF: lascia il punto scelto e riprende l'autofocus continuo al centro
+        if !on && !focusSelection {
+            Haptics.shared.selection()
+            withAnimation { tapPoint = nil; focusConfirmed = true }
+            camera.resumeAutoFocus()
+            return
+        }
         guard on != focusSelection else { return }
+        if on && !camera.manualFocusSupported {
+            camera.toast = String(localized: "Questa fotocamera ha il fuoco fisso: la messa a fuoco manuale non è disponibile.")
+            Haptics.shared.warning()
+            return
+        }
         // Risposta immediata: l'indicatore scivola subito sul nuovo segmento e la ghiera compare/sparisce con l'animazione,
         // mentre il cambio di obiettivo (che richiede un attimo) avviene in background
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { focusSelection = on }
@@ -715,6 +750,9 @@ private struct ZoomDialView: View {
     private let tickStep: CGFloat = 8           // una tacca ogni 8 punti
     @State private var dragFraction: CGFloat?   // posizione locale durante il trascinamento (il valore reale arriva in ritardo)
     @State private var lastY: CGFloat?
+    @State private var lastTime: CFTimeInterval = 0
+    @State private var velocity: Double = 0     // frazioni di corsa al secondo (smussata)
+    @State private var inertia = DialInertia()
     @State private var lastTick = 0
     @State private var atLimit = false
 
@@ -763,12 +801,15 @@ private struct ZoomDialView: View {
                 Rectangle().fill(Color.yellow).frame(width: width * 0.5, height: 1.5)
             }
             .frame(width: width, height: height)
+            // Area di tocco più larga della ghiera (14 pt per lato): non serve centrarla col dito
+            .padding(.horizontal, 14)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { v in handle(v.location.y) }
-                    .onEnded { _ in lastY = nil; dragFraction = nil; atLimit = false }
+                    .onEnded { _ in release() }
             )
+            .padding(.horizontal, -14)
 
             Text(CameraManager.lensLabel((zoom * 10).rounded() / 10))
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -787,30 +828,54 @@ private struct ZoomDialView: View {
     }
 
     private func handle(_ y: CGFloat) {
+        let now = CACurrentMediaTime()
         guard let last = lastY else {
-            lastY = y
-            dragFraction = fraction
-            lastTick = Int((fraction * travel) / tickStep)
+            inertia.stop()
+            lastY = y; lastTime = now; velocity = 0
+            let start = dragFraction ?? fraction            // se l'inerzia girava ancora, si riparte da dove è arrivata
+            dragFraction = start
+            lastTick = Int((start * travel) / tickStep)
+            atLimit = start <= 0 || start >= 1
             Haptics.shared.ringGrab()
             return
         }
-        lastY = y
+        let dt = max(now - lastTime, 0.001)
+        lastY = y; lastTime = now
+
+        // Verso l'alto = più zoom. Lento = regolazione fine, veloce = corsa lunga
+        let raw = Double(last - y) / Double(travel)
+        let delta = raw * DialDynamics.gain(forSpeed: abs(raw) / dt)
+        velocity = velocity * 0.6 + (delta / dt) * 0.4
+        _ = move(by: delta)
+    }
+
+    /// Rilascio: la ghiera continua a scorrere con inerzia e poi si allinea al valore reale.
+    private func release() {
+        let moving = CACurrentMediaTime() - lastTime < 0.08
+        let v = moving ? velocity : 0
+        lastY = nil; velocity = 0
+        inertia.start(velocity: v, step: { move(by: $0) }, finished: { dragFraction = nil; atLimit = false })
+    }
+
+    /// Sposta lo zoom, con un fermo morbido sugli obiettivi veri, click a ogni tacca (netto ogni cinque) e colpo a fine corsa.
+    /// Restituisce false a fine corsa.
+    @discardableResult
+    private func move(by delta: Double) -> Bool {
         let current = dragFraction ?? fraction
-        let new = min(1, max(0, current + (last - y) / travel))     // verso l'alto = più zoom
-        guard new != current else { return }
+        let new = min(1, max(0, current + CGFloat(delta)))
+        guard new != current else { return new > 0 && new < 1 }
         dragFraction = new
         let oldZoom = minZoom * pow(maxZoom / minZoom, current), newZoom = minZoom * pow(maxZoom / minZoom, new)
         onChange(newZoom)
-        // Fermo morbido quando si attraversa un obiettivo vero
         let crossed = stops.contains { ($0 - oldZoom) * ($0 - newZoom) < 0 || $0 == newZoom }
 
-        // Aptica come la ghiera di messa a fuoco: un click per tacca, colpo forte a fine corsa
         let tick = Int((new * travel) / tickStep)
         if crossed { Haptics.shared.detent(); lastTick = tick }
         else if tick != lastTick { lastTick = tick; Haptics.shared.ringTick(major: tick % 5 == 0) }
         let hitLimit = new == 0 || new == 1
         if hitLimit && !atLimit { Haptics.shared.ringLimit() }
         atLimit = hitLimit
+        return !hitLimit
     }
 }
 

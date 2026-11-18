@@ -22,11 +22,19 @@ struct ViewfinderLayer: View {
 /// Riquadro di messa a fuoco con cursore dell'esposizione (trascina in verticale dopo il tap).
 struct FocusReticle: View {
     var bias: Float
+    /// true mentre l'autofocus cerca il fuoco (riquadro bianco che "respira"); false a fuoco bloccato (giallo, fermo)
+    var searching = false
+    @State private var breathe = false
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 6).stroke(Color.yellow, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 6).stroke(searching ? Color.white : Color.yellow, lineWidth: searching ? 1 : 1.5)
                 .frame(width: 78, height: 78)
+                .scaleEffect(searching && breathe ? 1.1 : 1)
+                .animation(searching ? .easeInOut(duration: 0.45).repeatForever(autoreverses: true) : .spring(response: 0.25, dampingFraction: 0.55),
+                           value: breathe)
+                .animation(.easeInOut(duration: 0.2), value: searching)
+                .onAppear { breathe = true }
             // Tacche al centro dei lati
             Rectangle().fill(Color.yellow).frame(width: 1.5, height: 7).offset(y: -36)
             Rectangle().fill(Color.yellow).frame(width: 1.5, height: 7).offset(y: 36)
@@ -73,7 +81,7 @@ struct CameraAccessView: View {
             Text("Serve l'accesso alla fotocamera")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.primary)
-            Text("RetroCam usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni.")
+            Text("Lumora usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)

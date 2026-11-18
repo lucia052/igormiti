@@ -237,7 +237,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RetroCamCapture/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = RetroCamCapture;
+				INFOPLIST_KEY_CFBundleDisplayName = "Lumora Capture";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.2;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -300,7 +300,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RetroCamCapture/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = RetroCamCapture;
+				INFOPLIST_KEY_CFBundleDisplayName = "Lumora Capture";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.2;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -435,11 +435,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 556G2WR9F7;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = RetroCam;
+				INFOPLIST_KEY_CFBundleDisplayName = Lumora;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
-				INFOPLIST_KEY_NSCameraUsageDescription = "RetroCam usa la fotocamera per mostrare il mirino con i filtri retrò in tempo reale e scattare foto.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "RetroCam salva le tue foto nella libreria Foto.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Lumora usa la fotocamera per mostrare il mirino con i filtri retrò in tempo reale e scattare foto.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Lumora salva le tue foto nella libreria Foto.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -470,11 +470,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 556G2WR9F7;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = RetroCam;
+				INFOPLIST_KEY_CFBundleDisplayName = Lumora;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
-				INFOPLIST_KEY_NSCameraUsageDescription = "RetroCam usa la fotocamera per mostrare il mirino con i filtri retrò in tempo reale e scattare foto.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "RetroCam salva le tue foto nella libreria Foto.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Lumora usa la fotocamera per mostrare il mirino con i filtri retrò in tempo reale e scattare foto.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Lumora salva le tue foto nella libreria Foto.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

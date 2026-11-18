@@ -25,8 +25,6 @@ struct CameraPickerSheet: View {
                     Toggle("Effetti sonori", isOn: $soundEnabled)
                 } header: {
                     Text("Controlli")
-                } footer: {
-                    Text("Tocca il mirino per mettere a fuoco, poi trascina in verticale per regolare l'esposizione. Pizzica per fare zoom: gli obiettivi veri del telefono, poi lo zoom digitale.")
                 }
             }
             .navigationTitle("Impostazioni")

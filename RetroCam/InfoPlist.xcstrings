@@ -8,7 +8,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "RetroCam"
+            "value" : "Lumora"
           }
         }
       }
@@ -31,25 +31,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam verwendet die Kamera, um den Sucher mit Retro-Filtern in Echtzeit anzuzeigen und Fotos aufzunehmen."
+            "value" : "Lumora verwendet die Kamera, um den Sucher mit Retro-Filtern in Echtzeit anzuzeigen und Fotos aufzunehmen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam uses the camera to show the viewfinder with retro filters in real time and to take photos."
+            "value" : "Lumora uses the camera to show the viewfinder with retro filters in real time and to take photos."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam usa la cámara para mostrar el visor con filtros retro en tiempo real y hacer fotos."
+            "value" : "Lumora usa la cámara para mostrar el visor con filtros retro en tiempo real y hacer fotos."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam utilise l'appareil photo pour afficher le viseur avec des filtres rétro en temps réel et prendre des photos."
+            "value" : "Lumora utilise l'appareil photo pour afficher le viseur avec des filtres rétro en temps réel et prendre des photos."
           }
         }
       }
@@ -60,25 +60,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam sichert deine Fotos in der Fotomediathek."
+            "value" : "Lumora sichert deine Fotos in der Fotomediathek."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam saves your photos to the Photos library."
+            "value" : "Lumora saves your photos to the Photos library."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam guarda tus fotos en la fototeca."
+            "value" : "Lumora guarda tus fotos en la fototeca."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RetroCam enregistre vos photos dans la photothèque."
+            "value" : "Lumora enregistre vos photos dans la photothèque."
           }
         }
       }
