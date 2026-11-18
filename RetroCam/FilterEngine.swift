@@ -12,7 +12,9 @@ enum RenderQuality { case preview, photo }
 final class FilterEngine: @unchecked Sendable {
 
     let context = CIContext(options: [.cacheIntermediates: false])
-    private let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+    /// Spazio colore di lavoro e di uscita: Display P3 (quello delle foto dell'iPhone). Con sRGB i colori più saturi
+    /// venivano tagliati subito all'ingresso della LUT, e le foto uscivano più piatte di quelle originali.
+    private let srgb = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpace(name: CGColorSpace.sRGB)!
     private let lock = NSLock()
     private var cubes: [String: Data] = [:]
     private var stamps: [String: CIImage] = [:]
@@ -98,7 +100,7 @@ final class FilterEngine: @unchecked Sendable {
         // 7. Nastro VHS
         if r.chromaBleed > 0 { img = chromaBleed(img, amount: r.chromaBleed, ext: ext, s: s) }
         if r.scanlines > 0   { img = scanlines(img, amount: r.scanlines, ext: ext, s: s) }
-        if r.tracking        { img = trackingBand(img, ext: ext, s: s, time: time) }
+        if r.tracking        { img = trackingBand(img, ext: ext, s: s, time: time); img = headSwitching(img, ext: ext, s: s, time: time) }
 
         // 8. Light leak
         if r.lightLeak > 0 { img = lightLeak(img, amount: r.lightLeak, ext: ext, corner: leakCorner) }
@@ -343,6 +345,19 @@ final class FilterEngine: @unchecked Sendable {
             .applyingFilter("CIColorControls", parameters: [kCIInputBrightnessKey: 0.12, kCIInputSaturationKey: 0.7])
             .cropped(to: rect)
         return band.composited(over: img)
+    }
+
+    /// Rumore di commutazione delle testine: la striscia irregolare in fondo al fotogramma, tipica del nastro.
+    private func headSwitching(_ img: CIImage, ext: CGRect, s: Float, time: Double) -> CIImage {
+        let h = ext.height * 0.025
+        let rect = CGRect(x: ext.minX, y: ext.minY, width: ext.width, height: h)
+        // Strappo laterale che cambia a ogni istante, più forte verso il bordo inferiore
+        let dx = CGFloat(10 * s) * CGFloat(sin(time * 23) + 0.5 * sin(time * 61))
+        let strip = img.clampedToExtent().cropped(to: rect)
+            .transformed(by: CGAffineTransform(translationX: dx, y: 0))
+            .applyingFilter("CIColorControls", parameters: [kCIInputBrightnessKey: 0.06, kCIInputSaturationKey: 0.5])
+            .cropped(to: rect)
+        return strip.composited(over: img)
     }
 
     private func grain(_ img: CIImage, amount: Float, size: Float, color: Bool, streaks: Bool, ext: CGRect, s: Float) -> CIImage {

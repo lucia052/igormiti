@@ -449,7 +449,6 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
         return devices.indices.contains(index) ? devices[index] : devices.first
     }
 
-    /// Indice dell'obiettivo fisico attivo secondo lo zoom corrente della fotocamera virtuale.
     private func lensIndex(for v: AVCaptureDevice) -> Int {
         var index = 0
         for (i, f) in lensFactors.enumerated() where f <= v.videoZoomFactor + 0.01 { index = i }
@@ -859,7 +858,8 @@ extension CameraManager: AVCapturePhotoCaptureDelegate {
                 let mask = (rec.flash != nil && simulateFlash) ? personMask(for: ci) : nil
                 let out = engine.render(ci, mask: mask, recipe: rec, flashOn: simulateFlash,
                                         time: CACurrentMediaTime(), quality: .photo)
-                let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
+                // Display P3: stesso spazio del filtro e delle foto dell'iPhone (niente taglio dei colori saturi)
+                let sRGB = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpace(name: CGColorSpace.sRGB)!
                 let jpeg: Data?
                 if let liveID {
                     jpeg = liveJPEG(of: out, identifier: liveID, colorSpace: sRGB)

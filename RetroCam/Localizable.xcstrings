@@ -672,35 +672,6 @@
         }
       }
     },
-    "Livella": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wasserwaage"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Level"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nivel"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Niveau"
-          }
-        }
-      }
-    },
     "Messa a fuoco": {
       "extractionState": "manual",
       "localizations": {
@@ -1221,6 +1192,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diese Kamera hat einen Fixfokus: manueller Fokus ist nicht verfügbar."
+          }
+        }
+      }
+    },
+    "Allineamento orizzontale": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horizontal alignment"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alineación horizontal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alignement horizontal"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horizontale Ausrichtung"
           }
         }
       }

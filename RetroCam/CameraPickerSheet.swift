@@ -5,8 +5,8 @@ struct CameraPickerSheet: View {
     @ObservedObject var camera: CameraManager
     @Environment(\.dismiss) private var dismiss
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
-    @AppStorage("focusRingEnabled") private var ringEnabled = true
     @AppStorage("gridEnabled") private var gridEnabled = false
+    @AppStorage("levelEnabled") private var levelEnabled = false
     @AppStorage("saveOriginal") private var saveOriginal = false
     @AppStorage("mirrorFront") private var mirrorFront = true
     @AppStorage("soundEnabled") private var soundEnabled = true
@@ -16,11 +16,11 @@ struct CameraPickerSheet: View {
             List {
                 Section("Scatto") {
                     Toggle("Griglia dei terzi", isOn: $gridEnabled)
+                    Toggle("Allineamento orizzontale", isOn: $levelEnabled)
                     Toggle("Salva anche l'originale", isOn: $saveOriginal)
                     Toggle("Specchia la fotocamera frontale", isOn: $mirrorFront)
                 }
                 Section {
-                    Toggle("Ghiera di messa a fuoco", isOn: $ringEnabled)
                     Toggle("Feedback aptico", isOn: $hapticsEnabled)
                     Toggle("Effetti sonori", isOn: $soundEnabled)
                 } header: {
@@ -39,8 +39,8 @@ struct CameraPickerSheet: View {
         .presentationDetents([.fraction(0.78), .large])
         .presentationDragIndicator(.visible)
         .onChange(of: hapticsEnabled) { _, on in SoundFX.shared.toggle(on); if on { Haptics.shared.selection() } }
-        .onChange(of: ringEnabled) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
         .onChange(of: gridEnabled) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
+        .onChange(of: levelEnabled) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
         .onChange(of: soundEnabled) { _, on in if on { SoundFX.shared.toggle(true) } }     // acceso: lo sente; spento: tace
         .onChange(of: saveOriginal) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
         .onChange(of: mirrorFront) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on); camera.refreshMirroring() }

@@ -5,7 +5,6 @@ import AVKit
 /// Si adatta all'orientamento come l'app Fotocamera: in verticale controlli sopra e sotto, in orizzontale ai lati.
 struct ContentView: View {
     @StateObject private var camera = CameraManager()
-    @AppStorage("focusRingEnabled") private var ringEnabled = true
     @AppStorage("gridEnabled") private var gridEnabled = false
     @AppStorage("levelEnabled") private var levelEnabled = false
     @AppStorage("mirrorFront") private var mirrorFront = true
@@ -28,7 +27,7 @@ struct ContentView: View {
     @State private var focusSelection = false          // AF/MF mostrato: cambia subito, l'obiettivo si adegua dopo
     @Namespace private var focusNamespace
 
-    private let timerOptions = [0, 3, 10]
+    private let timerOptions = [0, 3, 5, 10]     // spento, 3, 5, 10 secondi
     private var isLandscape: Bool { interfaceOrientation.isLandscape }
 
     var body: some View {
@@ -69,7 +68,6 @@ struct ContentView: View {
                 camera.toast = nil
             }
         }
-        .onChange(of: ringEnabled) { _, on in if !on { camera.setManualFocus(false) } }
         // Cambi dall'esterno (frontale, ghiera disattivata…): l'interfaccia segue lo stato reale
         .onChange(of: camera.manualFocus) { _, manual in
             if focusSelection != manual { withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { focusSelection = manual } }
@@ -301,10 +299,21 @@ struct ContentView: View {
         .accessibilityValue(camera.recipe.name)
     }
 
+    /// Timer: un tocco apre il menu per scegliere spento, 3, 5 o 10 secondi.
     private var timerButton: some View {
-        Button {
-            timerIndex = (timerIndex + 1) % timerOptions.count
-            Haptics.shared.selection()
+        Menu {
+            ForEach(timerOptions.indices, id: \.self) { i in
+                Button {
+                    guard i != timerIndex else { return }
+                    timerIndex = i
+                    Haptics.shared.selection()
+                } label: {
+                    let seconds = timerOptions[i]
+                    let title: Text = seconds == 0 ? Text("Spento") : Text("\(seconds) secondi")
+                    if i == timerIndex { Label { title } icon: { Image(systemName: "checkmark") } }
+                    else { title }
+                }
+            }
         } label: {
             ZStack {
                 if timerOptions[timerIndex] == 0 {
@@ -334,7 +343,7 @@ struct ContentView: View {
                 .frame(width: 44, height: 44)
         }
         .glassCircle()
-        .accessibilityLabel("Livella")
+        .accessibilityLabel("Allineamento orizzontale")
         .accessibilityValue(levelEnabled ? "Attiva" : "Spenta")
     }
 
@@ -469,11 +478,10 @@ struct ContentView: View {
         .padding(.horizontal, 20)
     }
 
-    /// Livella (sopra) e Live Photo (sotto): due pulsanti separati, ciascuno col proprio cerchio di vetro.
+    /// Pulsante Live Photo, in colonna a sinistra sopra l'otturatore (la livella si attiva dalle impostazioni).
     private var topBar: some View {
         GlassGroup(spacing: 10) {
             VStack(spacing: 10) {
-                levelButton
                 liveButton
             }
             .foregroundStyle(.white)
@@ -482,7 +490,7 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var focusRing: some View {
-        if ringEnabled && focusSelection {
+        if focusSelection {
             FocusRingView(lensPosition: $camera.lensPosition, maxDiopters: camera.maxDiopters) {
                 camera.applyLensPosition($0)
             }
@@ -494,7 +502,7 @@ struct ContentView: View {
     /// Zoom manuale: ghiera verticale nello stile di quella del fuoco, sul bordo destro. Compare solo in MF.
     /// Trascinando in alto si ingrandisce; un tocco sul valore torna a 1×.
     @ViewBuilder private var zoomSliderLayer: some View {
-        if ringEnabled && focusSelection {
+        if focusSelection {
             HStack {
                 Spacer()
                 ZoomDialView(zoom: camera.zoom,
@@ -515,6 +523,7 @@ struct ContentView: View {
             Text(camera.hudText)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.85))
+            zoomPill
             // Riga sopra l'otturatore: comandi (sinistra), AF/MF (centro), cambio frontale/posteriore (destra)
             ZStack {
                 focusModeToggle
@@ -549,7 +558,6 @@ struct ContentView: View {
                     VStack(spacing: 14) {
                         flashButton
                         timerButton
-                        levelButton
                         liveButton
                         flipButton
                     }
@@ -571,6 +579,7 @@ struct ContentView: View {
                 nameCapsule.foregroundStyle(.white)
                 toastView
                 Spacer()
+                zoomPill
             }
             .padding(.vertical, 8)
 
@@ -594,9 +603,9 @@ struct ContentView: View {
         .accessibilityLabel("Messa a fuoco")
     }
 
-    /// Il fuoco manuale c'è, anche sulla frontale, se la ghiera è attiva nelle impostazioni. Se la lente è a fuoco fisso
-    /// (frontali più vecchie) il tocco su MF avvisa invece di non fare nulla.
-    private var canFocusManually: Bool { ringEnabled }
+    /// Il fuoco manuale c'è sempre, anche sulla frontale. Se la lente è a fuoco fisso (frontali più vecchie)
+    /// il tocco su MF avvisa invece di non fare nulla.
+    private var canFocusManually: Bool { true }
 
     private func setFocus(manual on: Bool) {
         // Già in AF e tocchi AF: lascia il punto scelto e riprende l'autofocus continuo al centro
@@ -638,6 +647,38 @@ struct ContentView: View {
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.4)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    // MARK: Zoom rapido (modalità automatica)
+    /// Passaggio rapido tra gli obiettivi veri (0,5× 1× 3×…) e le tappe digitali (2× 4×). Solo in AF: in manuale lo zoom
+    /// si regola con la ghiera verticale, e il cambio di obiettivo rimetterebbe il fuoco in automatico.
+    @ViewBuilder private var zoomPill: some View {
+        if !focusSelection && camera.zoomStops.count > 1 {
+            GlassGroup(spacing: 6) {
+                HStack(spacing: 4) {
+                    ForEach(camera.zoomStops, id: \.self) { stop in
+                        let on = abs(camera.zoom - stop) < 0.1
+                        Button {
+                            Haptics.shared.selection(); camera.setZoom(stop)
+                        } label: {
+                            Text(CameraManager.lensLabel(stop))
+                                .font(.system(size: 13, weight: .semibold))
+                                .frame(width: on ? 44 : 38, height: 34)
+                                .foregroundStyle(on ? Color.yellow : Color.white.opacity(0.85))
+                                .background(on ? Color.white.opacity(0.2) : Color.clear, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Zoom")
+                        .accessibilityValue(CameraManager.lensLabel(stop))
+                        .accessibilityAddTraits(on ? .isSelected : [])
+                    }
+                }
+                .padding(4)
+                .glassCapsule()
+            }
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: camera.zoom)
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+        }
     }
 
     private func popThumbnail() {
