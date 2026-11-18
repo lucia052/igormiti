@@ -144,6 +144,9 @@
 			knownRegions = (
 				en,
 				it,
+				es,
+				fr,
+				de,
 				Base,
 			);
 			mainGroup = A10000000000000000000004;

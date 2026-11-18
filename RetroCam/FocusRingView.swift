@@ -101,7 +101,7 @@ struct FocusRingView: View {
 
         // Aptica: un click per tacca, colpo forte a fine corsa
         let step = Int(new * travel / tickStep)
-        if step != lastTick { lastTick = step; Haptics.shared.ringTick() }
+        if step != lastTick { lastTick = step; Haptics.shared.ringTick(major: step % 5 == 0) }
         let hitLimit = (new == 0 || new == 1)
         if hitLimit && !atLimit { Haptics.shared.ringLimit() }
         atLimit = hitLimit

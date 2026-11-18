@@ -142,8 +142,8 @@ extension CameraRecipe {
         r.blackLift = 0.1; r.whitePoint = 0.95; r.highlightRolloff = 0.55
         r.shadowTint = SIMD3(0.3, 0.6, 0.6); r.shadowTintAmount = 0.12
         r.highlightTint = SIMD3(1.0, 0.85, 0.7); r.highlightTintAmount = 0.12
-        r.softness = 1.2; r.aberration = 0.5; r.bloom = 0.35; r.bloomRadius = 16; r.halation = 0.08; r.vignette = 0.3
-        r.grain = 0.09; r.grainSize = 2.2; r.grainColor = true
+        r.softness = 0.7; r.aberration = 0.5; r.bloom = 0.25; r.bloomRadius = 16; r.halation = 0.08; r.vignette = 0.3
+        r.grain = 0.045; r.grainSize = 1.6; r.grainColor = true
         r.lightLeak = 0.2; r.dust = 0.3; r.cropSquare = true; r.frame = .instant
         r.overlay = .instantDate
         r.flash = FlashParams(subjectEV: 0.5, backgroundEV: -0.5, hotspot: 0.3)

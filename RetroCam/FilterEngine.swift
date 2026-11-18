@@ -53,7 +53,14 @@ final class FilterEngine: @unchecked Sendable {
         let work = min(r.targetWidth ?? maxW, maxW)
         if img.extent.width > work {
             let k = work / img.extent.width
-            both { $0.transformed(by: CGAffineTransform(scaleX: k, y: k)) }
+            // Nella foto finale la riduzione (es. 4032 → 1280 / 640) usa Lanczos: niente scalettature.
+            // Nel mirino basta l'interpolazione semplice, più leggera a 30 fps.
+            both { i in
+                guard isPhoto else { return i.transformed(by: CGAffineTransform(scaleX: k, y: k)) }
+                let f = CIFilter.lanczosScaleTransform()
+                f.inputImage = i; f.scale = Float(k); f.aspectRatio = 1
+                return f.outputImage ?? i.transformed(by: CGAffineTransform(scaleX: k, y: k))
+            }
         }
         let o = img.extent.origin
         both { $0.transformed(by: CGAffineTransform(translationX: -o.x, y: -o.y)) }
@@ -108,7 +115,7 @@ final class FilterEngine: @unchecked Sendable {
 
         // 10. Grana
         if r.grain > 0 {
-            img = grain(img, amount: r.grain, size: r.grainSize, color: r.grainColor, streaks: r.grainStreaks, ext: ext)
+            img = grain(img, amount: r.grain, size: r.grainSize, color: r.grainColor, streaks: r.grainStreaks, ext: ext, s: s)
         }
 
         // 11. Polvere e graffi (sopra la grana: sono sulla superficie del negativo)
@@ -338,10 +345,13 @@ final class FilterEngine: @unchecked Sendable {
         return band.composited(over: img)
     }
 
-    private func grain(_ img: CIImage, amount: Float, size: Float, color: Bool, streaks: Bool, ext: CGRect) -> CIImage {
+    private func grain(_ img: CIImage, amount: Float, size: Float, color: Bool, streaks: Bool, ext: CGRect, s: Float) -> CIImage {
         guard var noise = CIFilter.randomGenerator().outputImage else { return img }
+        // La grana cresce con la risoluzione (s = larghezza/1000): la foto a piena risoluzione ha la stessa grana
+        // vista nel mirino, invece di una polvere impercettibile.
+        let grainSize = CGFloat(max(size, 1)) * CGFloat(max(s, 1))
         // Nastro: il rumore si allunga in orizzontale (strisce), non è tondo come la grana della pellicola
-        let sx = CGFloat(max(size, 1)) * (streaks ? 5 : 1), sy = CGFloat(max(size, 1))
+        let sx = grainSize * (streaks ? 5 : 1), sy = grainSize
         if sx > 1 || sy > 1 { noise = noise.transformed(by: CGAffineTransform(scaleX: sx, y: sy)) }
         noise = noise.transformed(by: CGAffineTransform(translationX: .random(in: 0...512), y: .random(in: 0...512)))
         // Il rumore ha anche l'alfa casuale: va reso opaco prima dei filtri di colore, che altrimenti lo "dividono"

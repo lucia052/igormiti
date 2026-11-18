@@ -41,6 +41,7 @@ struct LevelIndicator: View {
         .shadow(color: .black.opacity(0.4), radius: 2)
         .opacity(motion.isFlat ? 0 : 1)
         .animation(.easeOut(duration: 0.15), value: isLevel)
+        .onChange(of: isLevel) { _, level in if level && !motion.isFlat { Haptics.shared.levelAligned() } }
         .onAppear { motion.start() }
         .onDisappear { motion.stop() }
         .allowsHitTesting(false)

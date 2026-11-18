@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Modale di selezione fotocamera + impostazioni (griglia, originale, ghiera, aptica).
+/// Modale delle impostazioni (griglia, originale, ghiera, aptica). La fotocamera si sceglie dal pulsante in alto.
 struct CameraPickerSheet: View {
     @ObservedObject var camera: CameraManager
     @Environment(\.dismiss) private var dismiss
@@ -8,33 +8,28 @@ struct CameraPickerSheet: View {
     @AppStorage("focusRingEnabled") private var ringEnabled = true
     @AppStorage("gridEnabled") private var gridEnabled = false
     @AppStorage("saveOriginal") private var saveOriginal = false
+    @AppStorage("mirrorFront") private var mirrorFront = true
     @AppStorage("soundEnabled") private var soundEnabled = true
 
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    ForEach(CameraRecipe.all) { r in
-                        Button { choose(r) } label: { row(r) }
-                            .buttonStyle(.plain)
-                    }
-                }
                 Section("Scatto") {
                     Toggle("Griglia dei terzi", isOn: $gridEnabled)
                     Toggle("Salva anche l'originale", isOn: $saveOriginal)
+                    Toggle("Specchia la fotocamera frontale", isOn: $mirrorFront)
                 }
-                Section("Controlli") {
+                Section {
                     Toggle("Ghiera di messa a fuoco", isOn: $ringEnabled)
                     Toggle("Feedback aptico", isOn: $hapticsEnabled)
                     Toggle("Effetti sonori", isOn: $soundEnabled)
-                }
-                Section {
-                    LabeledContent("Versione", value: appVersion)
+                } header: {
+                    Text("Controlli")
                 } footer: {
                     Text("Tocca il mirino per mettere a fuoco, poi trascina in verticale per regolare l'esposizione. Pizzica per fare zoom: gli obiettivi veri del telefono, poi lo zoom digitale.")
                 }
             }
-            .navigationTitle("Fotocamere")
+            .navigationTitle("Impostazioni")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -45,49 +40,11 @@ struct CameraPickerSheet: View {
         }
         .presentationDetents([.fraction(0.78), .large])
         .presentationDragIndicator(.visible)
-        .onChange(of: hapticsEnabled) { _, on in if on { Haptics.shared.selection() } }
-        .onChange(of: ringEnabled) { _, _ in Haptics.shared.selection() }
-        .onChange(of: gridEnabled) { _, _ in Haptics.shared.selection() }
-        .onChange(of: saveOriginal) { _, _ in Haptics.shared.selection() }
-    }
-
-    private var appVersion: String {
-        let info = Bundle.main.infoDictionary
-        let v = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let b = info?["CFBundleVersion"] as? String ?? "1"
-        return "\(v) (\(b))"
-    }
-
-    private func row(_ r: CameraRecipe) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: r.symbol)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 48, height: 48)
-                .background(LinearGradient(colors: r.gradient, startPoint: .topLeading, endPoint: .bottomTrailing),
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(r.name).font(.headline)
-                Text(r.subtitle).font(.subheadline).foregroundStyle(.secondary)
-            }
-            Spacer()
-            if camera.recipe.id == r.id {
-                Image(systemName: "checkmark").fontWeight(.bold).foregroundStyle(.blue)
-            }
-        }
-        .contentShape(Rectangle())
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(camera.recipe.id == r.id ? .isSelected : [])
-    }
-
-    private func choose(_ r: CameraRecipe) {
-        guard r.id != camera.recipe.id else { dismiss(); return }
-        Haptics.shared.selection()
-        camera.recipe = r
-        Task {
-            try? await Task.sleep(for: .milliseconds(250))
-            dismiss()
-        }
+        .onChange(of: hapticsEnabled) { _, on in SoundFX.shared.toggle(on); if on { Haptics.shared.selection() } }
+        .onChange(of: ringEnabled) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
+        .onChange(of: gridEnabled) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
+        .onChange(of: soundEnabled) { _, on in if on { SoundFX.shared.toggle(true) } }     // acceso: lo sente; spento: tace
+        .onChange(of: saveOriginal) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
+        .onChange(of: mirrorFront) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on); camera.refreshMirroring() }
     }
 }

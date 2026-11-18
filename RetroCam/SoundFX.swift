@@ -1,12 +1,12 @@
 import AVFoundation
 
 /// Effetti sonori sintetizzati in codice (nessun file audio): click meccanico dell'otturatore,
-/// tick del timer e bip di conferma della messa a fuoco. L'utente può disattivarli (chiave "soundEnabled").
+/// tick del timer, "ding" di conferma della messa a fuoco e piccolo click degli interruttori (acceso: sale, spento: scende). L'utente può disattivarli (chiave "soundEnabled").
 @MainActor
 final class SoundFX {
     static let shared = SoundFX()
 
-    private enum Kind: CaseIterable { case shutter, tick, focus }
+    private enum Kind: CaseIterable { case shutter, tick, focus, toggleOn, toggleOff }
 
     private let sampleRate = 44_100.0
     private let engine = AVAudioEngine()
@@ -22,6 +22,8 @@ final class SoundFX {
     func shutter() { play(.shutter) }
     func timerTick() { play(.tick) }
     func focusBeep() { play(.focus) }
+    /// Interruttore attivato (suono che sale) o disattivato (suono che scende).
+    func toggle(_ on: Bool) { play(on ? .toggleOn : .toggleOff) }
 
     /// Chiamala all'avvio: costruisce i buffer e avvia il motore audio.
     func prepare() {
@@ -64,8 +66,9 @@ final class SoundFX {
         let duration: Double
         switch kind {
         case .shutter: duration = 0.16
-        case .tick:    duration = 0.05
-        case .focus:   duration = 0.17
+        case .tick:    duration = 0.06
+        case .focus:   duration = 0.14
+        case .toggleOn, .toggleOff: duration = 0.06
         }
         let frames = AVAudioFrameCount(duration * sampleRate)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
@@ -78,14 +81,20 @@ final class SoundFX {
             var s: Double
             switch kind {
             case .shutter:
-                // Specchio + tendina: due colpi secchi (rumore filtrato + tonfo grave)
-                s = click(t, at: 0.000, decay: 0.010, tone: 1900, thump: 150, noise: &noise) * 0.9
-                  + click(t, at: 0.055, decay: 0.016, tone: 1150, thump: 95, noise: &noise) * 0.75
+                // Specchio + tendina: due colpi attutiti (poco fruscio, tono basso e tonfo morbido)
+                s = click(t, at: 0.000, decay: 0.012, tone: 900, thump: 140, noise: &noise) * 0.55
+                  + click(t, at: 0.060, decay: 0.018, tone: 650, thump: 100, noise: &noise) * 0.45
             case .tick:
-                s = sin(2 * .pi * 1400 * t) * exp(-t / 0.011) * 0.5
+                // Tocco sordo e breve, senza il sibilo acuto di prima
+                s = softTone(t, freq: 700, attack: 0.004, decay: 0.014) * 0.32
             case .focus:
-                // Doppio bip di conferma, come le compatte
-                s = beep(t, at: 0.000, freq: 2600) + beep(t, at: 0.085, freq: 2600)
+                // Un solo "ding" morbido (note basse), al posto del doppio bip acuto
+                s = softTone(t, freq: 1046, attack: 0.008, decay: 0.045) * 0.3
+                  + softTone(t, freq: 1568, attack: 0.008, decay: 0.03) * 0.08
+            case .toggleOn:
+                s = blip(t, from: 620, to: 880)
+            case .toggleOff:
+                s = blip(t, from: 760, to: 520)
             }
             data[i] = Float(max(-1, min(1, s)))
         }
@@ -98,10 +107,25 @@ final class SoundFX {
         let x = t - start
         guard x >= 0 else { return 0 }
         let env = exp(-x / decay)
-        let hiss = noise.next() * env * 0.55
-        let body = sin(2 * .pi * tone * x) * env * 0.35
+        let hiss = noise.next() * env * 0.18          // meno fruscio: era la parte più "ruvida"
+        let body = sin(2 * .pi * tone * x) * min(1, x / 0.002) * env * 0.35
         let low = sin(2 * .pi * thump * x) * exp(-x / (decay * 2.6)) * 0.7
         return hiss + body + low
+    }
+
+    /// Piccolo "pop" di 40 ms con la frequenza che scivola da `from` a `to`: morbido, non fastidioso.
+    private func blip(_ t: Double, from f0: Double, to f1: Double) -> Double {
+        let length = 0.055
+        guard t < length else { return 0 }
+        let phase = 2 * .pi * (f0 * t + (f1 - f0) * t * t / (2 * length))
+        // Attacco di 8 ms (niente "click" iniziale) e chiusura dolce
+        let env = min(1, t / 0.008) * exp(-t / 0.02) * min(1, (length - t) / 0.01)
+        return sin(phase) * env * 0.22
+    }
+
+    /// Nota sinusoidale con attacco morbido e decadimento esponenziale.
+    private func softTone(_ t: Double, freq: Double, attack: Double, decay: Double) -> Double {
+        sin(2 * .pi * freq * t) * min(1, t / attack) * exp(-t / decay)
     }
 
     /// Bip sinusoidale di 45 ms con attacco e rilascio brevi (evita i "click" di inizio/fine).

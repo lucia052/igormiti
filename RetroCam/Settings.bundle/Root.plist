@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>StringsTable</key>
+	<string>Root</string>
+	<key>PreferenceSpecifiers</key>
+	<array>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Fotocamera</string>
+			<key>FooterText</key>
+			<string>La fotocamera selezionata si apre all'avvio di RetroCam.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSMultiValueSpecifier</string>
+			<key>Title</key>
+			<string>Fotocamera principale</string>
+			<key>Key</key>
+			<string>defaultCamera</string>
+			<key>DefaultValue</key>
+			<string>g7x</string>
+			<key>Titles</key>
+			<array>
+				<string>Canon G7X</string>
+				<string>Canon IXUS</string>
+				<string>Polaroid 600</string>
+				<string>Sony Handycam</string>
+			</array>
+			<key>Values</key>
+			<array>
+				<string>g7x</string>
+				<string>digicam</string>
+				<string>polaroid</string>
+				<string>handycam</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

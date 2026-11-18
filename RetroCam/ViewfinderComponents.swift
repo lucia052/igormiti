@@ -68,21 +68,21 @@ struct CameraAccessView: View {
         VStack(spacing: 16) {
             Image(systemName: "camera.fill")
                 .font(.system(size: 44, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(.secondary)
                 .padding(.bottom, 4)
             Text("Serve l'accesso alla fotocamera")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text("RetroCam usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(.secondary)
             Button {
                 if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
             } label: {
                 Text("Apri Impostazioni")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 24)
                     .frame(height: 48)
             }

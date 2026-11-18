@@ -12,6 +12,15 @@ extension View {
         }
     }
     func glassCapsule(interactive: Bool = false) -> some View { glass(in: Capsule(), interactive: interactive) }
+    /// Pulsante nativo: vetro di sistema su iOS 26+, altrimenti pulsante "bordered" di sistema.
+    @ViewBuilder
+    func nativeGlassButton() -> some View {
+        if #available(iOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered).tint(.white)
+        }
+    }
     func glassCircle(interactive: Bool = true) -> some View { glass(in: Circle(), interactive: interactive) }
 }
 
