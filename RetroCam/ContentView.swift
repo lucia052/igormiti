@@ -41,8 +41,8 @@ struct ContentView: View {
                 cameraUI.environment(\.colorScheme, .dark)
             }
         }
-        .animation(.spring(duration: 0.35), value: focusSelection)
-        .animation(.easeInOut(duration: 0.25), value: camera.toast)
+        .animation(.smooth(duration: 0.35), value: focusSelection)
+        .animation(.smooth(duration: 0.3), value: camera.toast)
         .sheet(isPresented: $showPicker) { CameraPickerSheet(camera: camera) }
         .task { camera.start(); Haptics.shared.prepare(); SoundFX.shared.prepare() }
         .task { await trackOrientation() }
@@ -102,11 +102,12 @@ struct ContentView: View {
             }
             // Livella (bilanciamento): indica se la foto è dritta; si attiva dal suo pulsante, indipendente dalla griglia
             if levelEnabled { LevelIndicator(orientation: interfaceOrientation) }
-            if isLandscape { landscapeLayer } else { topLayer }
+            // Ruotando il telefono i due layout si sciolgono l'uno nell'altro invece di scattare
+            if isLandscape { landscapeLayer.transition(.opacity) } else { topLayer.transition(.opacity) }
 
             focusRing
 
-            if !isLandscape { bottomLayer }
+            if !isLandscape { bottomLayer.transition(.opacity) }
             zoomSliderLayer
 
             if let n = countdown {
@@ -118,6 +119,15 @@ struct ContentView: View {
                 .opacity(shutterFlash ? (flashIsWhite ? 0.9 : 0.5) : 0)
                 .ignoresSafeArea().allowsHitTesting(false)
         }
+        // Animazioni morbide e coerenti (curva "smooth" di sistema) per i cambi di schermata
+        .animation(.smooth(duration: 0.35), value: isLandscape)
+        .animation(.smooth(duration: 0.3), value: camera.recipe.cropSquare)
+        .animation(.smooth(duration: 0.3), value: camera.recipe.id)
+        .animation(.smooth(duration: 0.3), value: camera.livePhotoSupported)
+        .animation(.smooth(duration: 0.3), value: camera.isFront)
+        .animation(.smooth(duration: 0.25), value: levelEnabled)
+        .animation(.smooth(duration: 0.25), value: gridEnabled)
+        .animation(.smooth(duration: 0.3), value: countdown)
     }
 
     // MARK: Mirino
@@ -127,6 +137,11 @@ struct ContentView: View {
                 ViewfinderLayer(preview: camera.preview,
                                 pixelated: camera.recipe.pixelated,
                                 square: camera.recipe.cropSquare)
+                    // Durante il cambio AF ↔ MF il mirino si ferma un attimo: lo si vela con una sfocatura che si dissolve,
+                    // come nel cambio di obiettivo dell'app Fotocamera, invece di mostrare un fotogramma congelato
+                    .blur(radius: camera.isSwitchingLens ? 16 : 0)
+                    .scaleEffect(camera.isSwitchingLens ? 1.02 : 1)
+                    .animation(.smooth(duration: 0.28), value: camera.isSwitchingLens)
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipped()
@@ -144,7 +159,6 @@ struct ContentView: View {
             .gesture(SpatialTapGesture().onEnded { v in focusTap(at: v.location, in: geo.size) })
             .simultaneousGesture(exposureDrag)
             .simultaneousGesture(pinch)
-            .simultaneousGesture(swipeToSwitch)
         }
         .ignoresSafeArea()
     }
@@ -157,27 +171,6 @@ struct ContentView: View {
                 camera.setZoom((pinchBase ?? 1) * v.magnification, ramp: false)
             }
             .onEnded { _ in pinchBase = nil }
-    }
-
-    /// Swipe orizzontale sul mirino: passa alla fotocamera precedente o successiva.
-    private var swipeToSwitch: some Gesture {
-        DragGesture(minimumDistance: 40)
-            .onEnded { v in
-                // Solo swipe netti e orizzontali; non durante regolazione di esposizione o messa a fuoco manuale
-                guard tapPoint == nil, !camera.manualFocus, timerTask == nil,
-                      abs(v.translation.width) > 80,
-                      abs(v.translation.width) > abs(v.translation.height) * 2 else { return }
-                switchCamera(by: v.translation.width < 0 ? 1 : -1)
-            }
-    }
-
-    private func switchCamera(by step: Int) {
-        let all = CameraRecipe.all
-        let currentID = camera.recipe.baseID ?? camera.recipe.id
-        guard let i = all.firstIndex(where: { $0.id == currentID }) else { return }
-        let next = all[(i + step + all.count) % all.count]
-        Haptics.shared.selection()
-        withAnimation(.easeInOut(duration: 0.2)) { camera.recipe = next }
     }
 
     private func focusTap(at p: CGPoint, in size: CGSize) {
@@ -259,6 +252,7 @@ struct ContentView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(camera.flashEnabled && camera.recipe.flash != nil ? Color.yellow : Color.white)
                 .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .disabled(camera.recipe.flash == nil)
         .opacity(camera.recipe.flash == nil ? 0.4 : 1)
@@ -274,7 +268,7 @@ struct ContentView: View {
                 Button {
                     guard r.id != currentID else { return }
                     Haptics.shared.selection()
-                    withAnimation(.easeInOut(duration: 0.2)) { camera.recipe = r }
+                    withAnimation(.smooth(duration: 0.3)) { camera.recipe = r }
                 } label: {
                     if r.id == currentID {
                         Label(r.name, systemImage: "checkmark")
@@ -326,6 +320,7 @@ struct ContentView: View {
             }
             .font(.system(size: 18, weight: .semibold))
             .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .glassCircle()
         .accessibilityLabel("Timer")
@@ -341,6 +336,7 @@ struct ContentView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(levelEnabled ? Color.yellow : Color.white)
                 .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .glassCircle()
         .accessibilityLabel("Allineamento orizzontale")
@@ -355,6 +351,7 @@ struct ContentView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(gridEnabled ? Color.yellow : Color.white)
                 .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .glassCircle()
         .accessibilityLabel("Griglia")
@@ -371,6 +368,7 @@ struct ContentView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(camera.livePhotoEnabled ? Color.yellow : Color.white)
                     .frame(width: 44, height: 44)
+                .contentShape(Circle())
             }
             .glassCircle()
             .accessibilityLabel("Live Photo")
@@ -380,12 +378,14 @@ struct ContentView: View {
 
     private var flipButton: some View {
         Button {
-            Haptics.shared.tap(); camera.flipCamera()
+            Haptics.shared.tap()
+            camera.flipCamera()
         } label: {
             Image(systemName: "arrow.triangle.2.circlepath.camera")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .glassCircle()
         .accessibilityLabel("Cambia fotocamera")
@@ -415,6 +415,7 @@ struct ContentView: View {
                 }
             }
             .scaleEffect(thumbPop ? 1.15 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .glass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityLabel("Galleria")
@@ -439,6 +440,7 @@ struct ContentView: View {
                 }
             }
             .frame(width: 56, height: 56)
+            .contentShape(Circle())
         }
         .glassCircle()
         .accessibilityLabel("Impostazioni")
@@ -507,7 +509,7 @@ struct ContentView: View {
                 Spacer()
                 ZoomDialView(zoom: camera.zoom,
                              minZoom: camera.zoomFloor,
-                             maxZoom: 10,
+                             maxZoom: camera.zoomCeiling,
                              stops: camera.lensStops) { camera.setZoom($0, ramp: false) } onReset: {
                     Haptics.shared.selection(); camera.setZoom(1)
                 }
@@ -636,12 +638,13 @@ struct ContentView: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 13, weight: .bold))
-                .frame(width: 48, height: 28)
+                .frame(width: 54, height: 36)
                 .foregroundStyle(selected ? Color.black : Color.white.opacity(0.8))
                 .background {
                     // Un solo indicatore giallo che scivola da un segmento all'altro
                     if selected { Capsule().fill(Color.yellow).matchedGeometryEffect(id: "focusHighlight", in: focusNamespace) }
                 }
+                .contentShape(Capsule())     // senza questo, con lo stile "plain", risponde solo dove c'è il testo
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
@@ -663,9 +666,10 @@ struct ContentView: View {
                         } label: {
                             Text(CameraManager.lensLabel(stop))
                                 .font(.system(size: 13, weight: .semibold))
-                                .frame(width: on ? 44 : 38, height: 34)
+                                .frame(width: 46, height: 40)
                                 .foregroundStyle(on ? Color.yellow : Color.white.opacity(0.85))
                                 .background(on ? Color.white.opacity(0.2) : Color.clear, in: Capsule())
+                                .contentShape(Capsule())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Zoom")
@@ -676,7 +680,6 @@ struct ContentView: View {
                 .padding(4)
                 .glassCapsule()
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: camera.zoom)
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
     }
@@ -758,6 +761,8 @@ private struct ShutterLabel: View {
             Circle().fill(armed ? Color.yellow : Color.white).padding(9)
         }
         .frame(width: 84, height: 84)
+        // Il cerchio e il pallino interno lasciano un anello vuoto in mezzo: senza questo, toccare lì non scatta
+        .contentShape(Circle())
     }
 }
 

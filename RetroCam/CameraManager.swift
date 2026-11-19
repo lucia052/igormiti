@@ -30,11 +30,14 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     @Published var livePhotoSupported = false       // l'obiettivo attivo permette le Live Photo
     @Published var manualFocus = false
     @Published var manualFocusSupported = true      // l'obiettivo attivo permette di bloccare il fuoco su una posizione
+    @Published var isSwitchingLens = false          // cambio di obiettivo in corso (AF ↔ MF): l'interfaccia vela il mirino
     @Published var isFocusing = false               // l'autofocus sta cercando il fuoco dopo un tocco
     @Published var lensPosition: Float = 0.6        // 0 = vicino ... 1 = infinito
     @Published var maxDiopters: Float = 10          // da minimumFocusDistance
     @Published var zoom: CGFloat = 1
-    @Published var zoomFloor: CGFloat = 1           // zoom minimo raggiungibile ora (cambia con l'obiettivo usato in manuale)
+    @Published var zoomFloor: CGFloat = 1
+    @Published var zoomCeiling: CGFloat = 25       // zoom massimo mostrato: quello del modello di iPhone, con tetto a 25×
+    static let maxDisplayZoom: CGFloat = 25         // zoom massimo dell'app (come l'app Fotocamera sui modelli più recenti)           // zoom minimo raggiungibile ora (cambia con l'obiettivo usato in manuale)
     @Published var lensStops: [CGFloat] = [1]       // zoom mostrato di ogni obiettivo fisico (es. 0.5, 1, 3)
     @Published var zoomStops: [CGFloat] = [1, 2, 4] // scatti rapidi: obiettivi fisici + tappe digitali
     @Published var exposureBias: Float = 0          // -2...+2 EV
@@ -79,6 +82,8 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
     private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?   // angolo di scatto secondo la posizione del telefono
     private var rotationDeviceID: String?
+    private var inputCache: [String: AVCaptureDeviceInput] = [:]   // input già pronti: creare un input costa decine di ms a ogni cambio
+    private var isFlipping = false                  // cambio frontale/posteriore in corso (si ignorano i tocchi ripetuti)
     private var focusObservation: NSKeyValueObservation?   // segue isAdjustingFocus del dispositivo attivo
 
     // Protetti da stateLock (letti anche dalla coda video)
@@ -124,6 +129,11 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
 
     private func syncRenderState() {
         stateLock.lock(); renderRecipe = recipe; renderFlash = flashEnabled; renderLive = livePhotoEnabled; stateLock.unlock()
+    }
+    /// Lo scatto Live è ancora in attesa (voce presente)? Funzione sincrona: NSLock non si usa da contesti asincroni.
+    private func isLiveCapturePending(_ id: Int64) -> Bool {
+        stateLock.lock(); defer { stateLock.unlock() }
+        return livePending[id] != nil
     }
     private func liveRequested() -> Bool {
         stateLock.lock(); defer { stateLock.unlock() }
@@ -286,10 +296,14 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
             dev.unlockForConfiguration()
         }
         // Scatti rapidi: obiettivi fisici più 2× e 4× digitali se non coincidono con un obiettivo vero
+        let ceiling = max(1, min(dev.maxAvailableVideoZoomFactor * mult, Self.maxDisplayZoom))       // massimo di questo modello, nel valore mostrato, tetto 25×
         var quick = stops
-        for digital in [CGFloat(2), 4] where !stops.contains(where: { abs($0 - digital) < 0.3 }) { quick.append(digital) }
+        for digital in [CGFloat(2), 4] where digital <= ceiling && !stops.contains(where: { abs($0 - digital) < 0.3 }) { quick.append(digital) }
         quick.sort()
-        DispatchQueue.main.async { self.lensStops = stops; self.zoomStops = quick; self.zoom = 1; self.zoomFloor = stops.first ?? 1 }
+        DispatchQueue.main.async {
+            self.lensStops = stops; self.zoomStops = quick; self.zoom = 1
+            self.zoomFloor = stops.first ?? 1; self.zoomCeiling = ceiling
+        }
     }
 
     private func configureAndRun() {
@@ -321,6 +335,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
             publishDeviceInfo(dev)
             installSystemControls(for: dev)
             session.startRunning()
+            prewarmOtherCamera()
         }
     }
 
@@ -366,12 +381,39 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     // MARK: Fotocamera frontale / posteriore
-    func flipCamera() {
+    /// Input già creato per il dispositivo (da sessionQueue). Il primo uso lo crea, i successivi sono immediati.
+    private func cachedInput(for dev: AVCaptureDevice) -> AVCaptureDeviceInput? {
+        if let input = inputCache[dev.uniqueID] { return input }
+        guard let input = try? AVCaptureDeviceInput(device: dev) else { return nil }
+        inputCache[dev.uniqueID] = input
+        return input
+    }
+
+    /// Prepara in anticipo l'input dell'altra fotocamera, così il primo cambio non deve crearlo.
+    private func prewarmOtherCamera() {
         sessionQueue.async { [self] in
-            guard configured, let oldInput = currentInput else { return }
+            guard let other = camera((device?.position ?? .back) == .back ? .front : .back) else { return }
+            _ = cachedInput(for: other)
+        }
+    }
+
+    func flipCamera() {
+        // L'interfaccia reagisce subito (mirino velato, come nell'app Fotocamera), prima ancora che la sessione cambi
+        DispatchQueue.main.async { self.isSwitchingLens = true }
+        sessionQueue.async { [self] in
+            guard configured, let oldInput = currentInput, !isFlipping else {
+                DispatchQueue.main.async { self.isSwitchingLens = false }
+                return
+            }
+            isFlipping = true
+            defer {
+                isFlipping = false
+                // Qualche fotogramma della nuova fotocamera prima di togliere il velo
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { self.isSwitchingLens = false }
+            }
             let toFront = (device?.position ?? .back) == .back
             guard let dev = camera(toFront ? .front : .back),
-                  let input = try? AVCaptureDeviceInput(device: dev) else { return }
+                  let input = cachedInput(for: dev) else { return }
 
             session.beginConfiguration()
             session.removeInput(oldInput)
@@ -389,13 +431,16 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
 
             stateLock.lock(); latestMask = nil; manualActive = false; stateLock.unlock()
             swappedForManual = false
-            publishDeviceInfo(dev)
+            // Prima l'interfaccia (appena la nuova fotocamera è attiva), poi i dati del dispositivo
             DispatchQueue.main.async {
                 self.isFront = toFront
                 self.zoom = 1
                 self.manualFocus = false
                 self.exposureBias = 0
             }
+            publishDeviceInfo(dev)
+            installSystemControls(for: dev)        // i cursori del Camera Control devono seguire la nuova fotocamera
+            prewarmOtherCamera()
         }
     }
 
@@ -457,7 +502,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
 
     /// Da chiamare sulla sessionQueue.
     private func switchInput(to newDevice: AVCaptureDevice) -> Bool {
-        guard let old = currentInput, let input = try? AVCaptureDeviceInput(device: newDevice) else { return false }
+        guard let old = currentInput, let input = cachedInput(for: newDevice) else { return false }
         session.beginConfiguration()
         session.removeInput(old)
         var ok = false
@@ -499,6 +544,9 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
                 DispatchQueue.main.async { completion?(false) }
                 return
             }
+            // Il cambio dell'obiettivo ferma il mirino per un istante: lo si copre con una sfocatura dolce (vedi ContentView)
+            let willSwap = (on && d.isVirtualDevice && !d.isLockingFocusWithCustomLensPositionSupported) || (!on && swappedForManual)
+            if willSwap { DispatchQueue.main.async { self.isSwitchingLens = true } }
             if on, d.isVirtualDevice, !d.isLockingFocusWithCustomLensPositionSupported,
                case let shownZoom = d.videoZoomFactor * lensMultiplier,
                case let index = lensIndex(for: d),
@@ -507,9 +555,10 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
                 // Sull'obiettivo fisico lo zoom 1.0 corrisponde allo zoom mostrato di quell'obiettivo: si mantiene lo zoom attuale
                 let base = max(lensFactors[min(index, lensFactors.count - 1)] * lensMultiplier, 0.01)
                 swappedBase = base; swappedForManual = true
-                DispatchQueue.main.async { self.zoomFloor = base }
+                let ceiling = max(1, min(physical.maxAvailableVideoZoomFactor * base, Self.maxDisplayZoom))     // massimo di questo obiettivo, tetto 25×
+                DispatchQueue.main.async { self.zoomFloor = base; self.zoomCeiling = ceiling }
                 if (try? physical.lockForConfiguration()) != nil {
-                    let upper = min(physical.maxAvailableVideoZoomFactor, 10 / base)
+                    let upper = min(physical.maxAvailableVideoZoomFactor, Self.maxDisplayZoom / base)
                     let target = min(max(shownZoom / base, physical.minAvailableVideoZoomFactor), upper)
                     physical.videoZoomFactor = target
                     physical.unlockForConfiguration()
@@ -541,6 +590,10 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
             stateLock.lock(); manualActive = result; stateLock.unlock()
             installSystemControls(for: d)       // il Camera Control passa da zoom/esposizione a fuoco (o viceversa)
             DispatchQueue.main.async { self.manualFocus = result; completion?(result) }
+            if willSwap {
+                // Qualche fotogramma del nuovo obiettivo prima di togliere il velo
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { self.isSwitchingLens = false }
+            }
         }
     }
 
@@ -619,7 +672,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
             guard let d = device else { return }
             // Con la messa a fuoco manuale si usa un solo obiettivo fisico: lo zoom è digitale su quell'obiettivo
             let mult = swappedForManual ? swappedBase : max(lensMultiplier, 0.01)
-            let upper = min(d.maxAvailableVideoZoomFactor, 10 / mult)
+            let upper = min(d.maxAvailableVideoZoomFactor, Self.maxDisplayZoom / mult)       // limite del modello di iPhone, con tetto 25×
             let target = min(max(display / mult, d.minAvailableVideoZoomFactor), upper)
             do {
                 try d.lockForConfiguration()
@@ -918,8 +971,7 @@ extension CameraManager: AVCapturePhotoCaptureDelegate {
             let filtered = await filterLiveMovie(at: outputFileURL, stillTime: photoDisplayTime, recipe: rec, mirror: mirrorShot)
             if filtered != nil { try? FileManager.default.removeItem(at: outputFileURL) }
             let final = filtered ?? outputFileURL        // se il filtro non riesce, resta il filmato originale: la Live funziona comunque
-            stateLock.lock(); let exists = livePending[id] != nil; stateLock.unlock()
-            if exists {
+            if isLiveCapturePending(id) {
                 updateLive(id) { $0.movie = final; $0.awaitingMovie = false }
             } else {
                 try? FileManager.default.removeItem(at: final)      // lo scatto è già stato chiuso o scartato
@@ -1021,15 +1073,17 @@ extension CameraManager {
                 items: [stillItem], timeRange: CMTimeRange(start: stillTime.isValid ? stillTime : start, duration: frameDuration)))
             stillInput.markAsFinished()
 
-            // Copia i fotogrammi filtrati nel nuovo filmato
+            // Copia i fotogrammi filtrati nel nuovo filmato. Lettore e scrittore sono usati solo dalla coda dedicata:
+            // il contenitore dice al compilatore che il passaggio tra contesti è sicuro.
+            let pump = FramePump(input: videoInput, output: readerOutput)
             let queue = DispatchQueue(label: "retrocam.livemovie")
             await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
-                videoInput.requestMediaDataWhenReady(on: queue) {
-                    while videoInput.isReadyForMoreMediaData {
-                        if let buffer = readerOutput.copyNextSampleBuffer() {
-                            if !videoInput.append(buffer) { videoInput.markAsFinished(); done.resume(); return }
+                pump.input.requestMediaDataWhenReady(on: queue) {
+                    while pump.input.isReadyForMoreMediaData {
+                        if let buffer = pump.output.copyNextSampleBuffer() {
+                            if !pump.input.append(buffer) { pump.input.markAsFinished(); done.resume(); return }
                         } else {
-                            videoInput.markAsFinished(); done.resume(); return
+                            pump.input.markAsFinished(); done.resume(); return
                         }
                     }
                 }
@@ -1043,5 +1097,14 @@ extension CameraManager {
         } catch {
             return nil
         }
+    }
+}
+
+/// Coppia scrittore/lettore del filmato Live, usata da una sola coda alla volta.
+private final class FramePump: @unchecked Sendable {
+    let input: AVAssetWriterInput
+    let output: AVAssetReaderVideoCompositionOutput
+    init(input: AVAssetWriterInput, output: AVAssetReaderVideoCompositionOutput) {
+        self.input = input; self.output = output
     }
 }

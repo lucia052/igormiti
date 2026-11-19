@@ -4,7 +4,7 @@ import SwiftUI
 enum DialDynamics {
     /// Sensibilità secondo la velocità del dito (`speed` = frazioni di corsa al secondo):
     /// lento = regolazione fine (0,5×), veloce = corsa lunga (fino a 2×).
-    static func gain(forSpeed speed: Double) -> Double { min(2.0, max(0.5, 0.5 + speed)) }
+    static func gain(forSpeed speed: Double, maxGain: Double = 2.0) -> Double { min(maxGain, max(0.5, 0.5 + speed)) }
 
     /// Velocità massima accettata per l'inerzia (frazioni di corsa al secondo).
     static let maxVelocity = 3.0
@@ -20,9 +20,10 @@ final class DialInertia {
     /// - velocity: frazioni di corsa al secondo (con segno).
     /// - step: applica uno spostamento; restituisce false quando la corsa è finita.
     /// - finished: chiamata quando l'inerzia si esaurisce (non se viene interrotta da un nuovo tocco).
-    func start(velocity: Double, step: @escaping @MainActor (Double) -> Bool, finished: @escaping @MainActor () -> Void) {
+    func start(velocity: Double, maxVelocity: Double = DialDynamics.maxVelocity, decay: Double = 4.5,
+               step: @escaping @MainActor (Double) -> Bool, finished: @escaping @MainActor () -> Void) {
         stop()
-        let v0 = max(-DialDynamics.maxVelocity, min(DialDynamics.maxVelocity, velocity))
+        let v0 = max(-maxVelocity, min(maxVelocity, velocity))
         guard abs(v0) > 0.2 else { finished(); return }
         task = Task { @MainActor in
             var v = v0
@@ -33,7 +34,7 @@ final class DialInertia {
                 let now = CACurrentMediaTime(), dt = now - last
                 last = now
                 if !step(v * dt) { break }
-                v *= exp(-dt * 4.5)                 // rallenta: ~0,22 s per perdere il 63% della velocità
+                v *= exp(-dt * decay)               // rallenta (decay 4,5: ~0,22 s per perdere il 63% della velocità)
             }
             if !Task.isCancelled { finished() }
         }

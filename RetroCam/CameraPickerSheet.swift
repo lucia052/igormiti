@@ -38,6 +38,7 @@ struct CameraPickerSheet: View {
         }
         .presentationDetents([.fraction(0.78), .large])
         .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.scrolls)
         .onChange(of: hapticsEnabled) { _, on in SoundFX.shared.toggle(on); if on { Haptics.shared.selection() } }
         .onChange(of: gridEnabled) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }
         .onChange(of: levelEnabled) { _, on in Haptics.shared.selection(); SoundFX.shared.toggle(on) }

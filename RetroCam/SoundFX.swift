@@ -31,7 +31,6 @@ final class SoundFX {
         isPrepared = true
         // .ambient: non interrompe la musica dell'utente e rispetta il tasto silenzioso
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-        try? AVAudioSession.sharedInstance().setActive(true)
 
         guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else { return }
         for kind in Kind.allCases {
@@ -42,7 +41,25 @@ final class SoundFX {
             nodes[kind] = node
             buffers[kind] = buffer
         }
-        startEngine()
+        // Attivazione asincrona: setActive(true) sul main thread può bloccare l'interfaccia (avviso di runtime di iOS)
+        Task { @MainActor in
+            await activateSession()
+            startEngine()
+        }
+    }
+
+    /// Attiva la sessione audio senza bloccare il main thread: API asincrona da iOS 27, su versioni precedenti una coda in background.
+    private nonisolated func activateSession() async {
+        if #available(iOS 27.0, *) {
+            _ = try? await AVAudioSession.sharedInstance().activate()
+        } else {
+            await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    try? AVAudioSession.sharedInstance().setActive(true)
+                    done.resume()
+                }
+            }
+        }
     }
 
     // MARK: Riproduzione

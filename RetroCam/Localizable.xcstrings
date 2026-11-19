@@ -1,1230 +1,1239 @@
 {
-  "sourceLanguage": "it",
-  "strings": {
-    "%lld": {},
-    "%lld secondi": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Sekunden"
+  "sourceLanguage" : "it",
+  "strings" : {
+    "%lld" : {
+
+    },
+    "%lld secondi" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Sekunden"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld seconds"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld seconds"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld segundos"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld segundos"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld secondes"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld secondes"
           }
         }
       }
     },
-    "%llds": {},
-    "∞": {},
-    "AF": {},
-    "Annulla timer": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timer abbrechen"
+    "%llds" : {
+
+    },
+    "∞" : {
+
+    },
+    "AF" : {
+
+    },
+    "Allineamento orizzontale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontale Ausrichtung"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancel timer"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontal alignment"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancelar temporizador"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alineación horizontal"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Annuler le minuteur"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alignement horizontal"
           }
         }
       }
     },
-    "Apre la fotocamera di Lumora.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffnet die Lumora-Kamera."
+    "Annulla timer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timer abbrechen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opens the Lumora camera."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel timer"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre la cámara de Lumora."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar temporizador"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre l'appareil photo de Lumora."
-          }
-        }
-      }
-    },
-    "Apri Impostazioni": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einstellungen öffnen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Settings"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir Ajustes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrir les Réglages"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler le minuteur"
           }
         }
       }
     },
-    "Apri Lumora": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lumora öffnen"
+    "Apre la fotocamera di Lumora." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet die Lumora-Kamera."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Lumora"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the Lumora camera."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir Lumora"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre la cámara de Lumora."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrir Lumora"
-          }
-        }
-      }
-    },
-    "Attiva": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activé"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre l'appareil photo de Lumora."
           }
         }
       }
     },
-    "Cambia fotocamera": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamera wechseln"
+    "Apri Impostazioni" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen öffnen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Switch camera"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambiar de cámara"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Ajustes"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Changer de caméra"
-          }
-        }
-      }
-    },
-    "Chiudi": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schließen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Close"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cerrar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fermer"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir les Réglages"
           }
         }
       }
     },
-    "Consenti l'accesso alle Foto in Impostazioni per salvare gli scatti.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erlaube in den Einstellungen den Zugriff auf Fotos, um Aufnahmen zu sichern."
+    "Apri Lumora" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lumora öffnen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allow access to Photos in Settings to save your shots."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Lumora"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Permite el acceso a Fotos en Ajustes para guardar las fotos."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Lumora"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Autorisez l'accès à Photos dans Réglages pour enregistrer vos photos."
-          }
-        }
-      }
-    },
-    "Controlli": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Steuerung"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Controls"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Controles"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Commandes"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir Lumora"
           }
         }
       }
     },
-    "Effetti sonori": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Soundeffekte"
+    "Attiva" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sound effects"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Efectos de sonido"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activado"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Effets sonores"
-          }
-        }
-      }
-    },
-    "Feedback aptico": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Haptisches Feedback"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Haptic feedback"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Respuesta háptica"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Retour haptique"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activé"
           }
         }
       }
     },
-    "Flash": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Blitz"
+    "Cambia fotocamera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera wechseln"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flash"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch camera"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flash"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiar de cámara"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flash"
-          }
-        }
-      }
-    },
-    "Fotocamera non disponibile.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamera nicht verfügbar."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Camera unavailable."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cámara no disponible."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Appareil photo indisponible."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changer de caméra"
           }
         }
       }
     },
-    "Galleria": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Galerie"
+    "Chiudi" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gallery"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Galería"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerrar"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Galerie"
-          }
-        }
-      }
-    },
-    "Ghiera di messa a fuoco": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fokusring"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Focus ring"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anillo de enfoque"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bague de mise au point"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer"
           }
         }
       }
     },
-    "Griglia": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Raster"
+    "Consenti l'accesso alle Foto in Impostazioni per salvare gli scatti." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube in den Einstellungen den Zugriff auf Fotos, um Aufnahmen zu sichern."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grid"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow access to Photos in Settings to save your shots."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuadrícula"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite el acceso a Fotos en Ajustes para guardar las fotos."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grille"
-          }
-        }
-      }
-    },
-    "Griglia dei terzi": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Drittelregel-Raster"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rule-of-thirds grid"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuadrícula de tercios"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grille des tiers"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorisez l'accès à Photos dans Réglages pour enregistrer vos photos."
           }
         }
       }
     },
-    "Impossibile elaborare la foto.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Foto konnte nicht verarbeitet werden."
+    "Controlli" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steuerung"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't process the photo."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controls"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo procesar la foto."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Controles"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossible de traiter la photo."
-          }
-        }
-      }
-    },
-    "Impostazioni": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einstellungen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Settings"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajustes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réglages"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commandes"
           }
         }
       }
     },
-    "Live Photo": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Live Photo"
+    "Effetti sonori" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soundeffekte"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Live Photo"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sound effects"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Live Photo"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efectos de sonido"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Live Photo"
-          }
-        }
-      }
-    },
-    "Live Photo non abbinabile: foto salvata senza movimento.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Live Photo konnte nicht verknüpft werden: als Standbild gesichert."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't pair the Live Photo: saved as a still photo."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo emparejar la Live Photo: se guardó como foto fija."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossible d'associer la Live Photo : enregistrée comme photo fixe."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effets sonores"
           }
         }
       }
     },
-    "Live Photo non abbinata alla foto modificata.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Live Photo konnte nicht mit dem bearbeiteten Foto verknüpft werden."
+    "Feedback aptico" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haptisches Feedback"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Live Photo couldn't be paired with the edited photo."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Haptic feedback"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La Live Photo no se pudo emparejar con la foto editada."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Respuesta háptica"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La Live Photo n'a pas pu être associée à la photo modifiée."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retour haptique"
           }
         }
       }
     },
-    "Messa a fuoco": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fokus"
+    "Flash" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blitz"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Focus"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flash"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enfoque"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flash"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mise au point"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flash"
           }
         }
       }
     },
-    "Messa a fuoco manuale": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Manueller Fokus"
+    "Fotocamera non disponibile." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera nicht verfügbar."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Manual focus"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera unavailable."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enfoque manual"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cámara no disponible."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mise au point manuelle"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appareil photo indisponible."
           }
         }
       }
     },
-    "MF": {},
-    "MIN": {},
-    "Lumora usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lumora verwendet die Kamera, um den Sucher mit Filtern in Echtzeit anzuzeigen. Du kannst den Zugriff in den Einstellungen aktivieren."
+    "Galleria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Galerie"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lumora uses the camera to show the viewfinder with filters in real time. You can turn it on in Settings."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gallery"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lumora usa la cámara para mostrar el visor con los filtros en tiempo real. Puedes activarla en Ajustes."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Galería"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lumora utilise l'appareil photo pour afficher le viseur avec les filtres en temps réel. Vous pouvez l'activer dans Réglages."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Galerie"
           }
         }
       }
     },
-    "Salva anche l'originale": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Original ebenfalls sichern"
+    "Ghiera di messa a fuoco" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokusring"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Also save the original"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus ring"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar también el original"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anillo de enfoque"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrer aussi l'original"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bague de mise au point"
           }
         }
       }
     },
-    "Salvataggio non riuscito.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sichern fehlgeschlagen."
+    "Griglia" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raster"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't save."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo guardar."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuadrícula"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Échec de l'enregistrement."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grille"
           }
         }
       }
     },
-    "Scatta": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Foto aufnehmen"
+    "Griglia dei terzi" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drittelregel-Raster"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Take photo"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rule-of-thirds grid"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hacer foto"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuadrícula de tercios"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prendre une photo"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grille des tiers"
           }
         }
       }
     },
-    "Scatto": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufnahme"
+    "Impossibile elaborare la foto." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Foto konnte nicht verarbeitet werden."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Capture"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't process the photo."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Captura"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo procesar la foto."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prise de vue"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de traiter la photo."
           }
         }
       }
     },
-    "Scatto non riuscito. Riprova.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufnahme fehlgeschlagen. Versuche es erneut."
+    "Impostazioni" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Capture failed. Try again."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error al hacer la foto. Inténtalo de nuevo."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Échec de la prise de vue. Réessayez."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages"
           }
         }
       }
     },
-    "Scegli fotocamera": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamera wählen"
+    "Live Photo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Photo"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose camera"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Photo"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elegir cámara"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Photo"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisir la caméra"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Photo"
           }
         }
       }
     },
-    "Serve l'accesso alla fotocamera": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamerazugriff erforderlich"
+    "Live Photo non abbinabile: foto salvata senza movimento." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Photo konnte nicht verknüpft werden: als Standbild gesichert."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Camera access needed"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't pair the Live Photo: saved as a still photo."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se necesita acceso a la cámara"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo emparejar la Live Photo: se guardó como foto fija."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accès à l'appareil photo requis"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d'associer la Live Photo : enregistrée comme photo fixe."
           }
         }
       }
     },
-    "Specchia la fotocamera frontale": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Frontkamera spiegeln"
+    "Live Photo non abbinata alla foto modificata." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Live Photo konnte nicht mit dem bearbeiteten Foto verknüpft werden."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mirror front camera"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Live Photo couldn't be paired with the edited photo."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reflejar la cámara frontal"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La Live Photo no se pudo emparejar con la foto editada."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inverser la caméra frontale"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La Live Photo n'a pas pu être associée à la photo modifiée."
           }
         }
       }
     },
-    "Spenta": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus"
+    "Lumora usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lumora verwendet die Kamera, um den Sucher mit Filtern in Echtzeit anzuzeigen. Du kannst den Zugriff in den Einstellungen aktivieren."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Off"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lumora uses the camera to show the viewfinder with filters in real time. You can turn it on in Settings."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desactivado"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lumora usa la cámara para mostrar el visor con los filtros en tiempo real. Puedes activarla en Ajustes."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactivé"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lumora utilise l'appareil photo pour afficher le viseur avec les filtres en temps réel. Vous pouvez l'activer dans Réglages."
           }
         }
       }
     },
-    "Spento": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus"
+    "Messa a fuoco" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fokus"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Off"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desactivado"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enfoque"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactivé"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mise au point"
           }
         }
       }
     },
-    "Timer": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timer"
+    "Messa a fuoco manuale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manueller Fokus"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Timer"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual focus"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Temporizador"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enfoque manual"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Minuteur"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mise au point manuelle"
           }
         }
       }
     },
-    "Tocca il mirino per mettere a fuoco, poi trascina in verticale per regolare l'esposizione. Pizzica per fare zoom: gli obiettivi veri del telefono, poi lo zoom digitale.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tippe auf den Sucher, um scharfzustellen, und ziehe dann vertikal, um die Belichtung anzupassen. Zum Zoomen zusammenziehen: zuerst die echten Objektive des Telefons, dann der Digitalzoom."
+    "MF" : {
+
+    },
+    "Questa fotocamera ha il fuoco fisso: la messa a fuoco manuale non è disponibile." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Kamera hat einen Fixfokus: manueller Fokus ist nicht verfügbar."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap the viewfinder to focus, then drag vertically to adjust exposure. Pinch to zoom: the phone's real lenses first, then digital zoom."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This camera has a fixed focus: manual focus isn't available."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toca el visor para enfocar y arrastra en vertical para ajustar la exposición. Pellizca para hacer zoom: primero los objetivos reales del teléfono y luego el zoom digital."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta cámara tiene enfoque fijo: el enfoque manual no está disponible."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Touchez le viseur pour faire la mise au point, puis faites glisser verticalement pour régler l'exposition. Pincez pour zoomer : d'abord les vrais objectifs du téléphone, puis le zoom numérique."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cet appareil photo a une mise au point fixe : la mise au point manuelle n'est pas disponible."
           }
         }
       }
     },
-    "Versione": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version"
+    "Salva anche l'originale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original ebenfalls sichern"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also save the original"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Versión"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar también el original"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer aussi l'original"
           }
         }
       }
     },
-    "Zoom": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom"
+    "Salvataggio non riuscito." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sichern fehlgeschlagen."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't save."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo guardar."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de l'enregistrement."
           }
         }
       }
     },
-    "Questa fotocamera ha il fuoco fisso: la messa a fuoco manuale non è disponibile.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This camera has a fixed focus: manual focus isn't available."
+    "Scatta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto aufnehmen"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta cámara tiene enfoque fijo: el enfoque manual no está disponible."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take photo"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cet appareil photo a une mise au point fixe : la mise au point manuelle n'est pas disponible."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hacer foto"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Kamera hat einen Fixfokus: manueller Fokus ist nicht verfügbar."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prendre une photo"
           }
         }
       }
     },
-    "Allineamento orizzontale": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horizontal alignment"
+    "Scatto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnahme"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alineación horizontal"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alignement horizontal"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Captura"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horizontale Ausrichtung"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prise de vue"
+          }
+        }
+      }
+    },
+    "Scatto non riuscito. Riprova." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnahme fehlgeschlagen. Versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture failed. Try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error al hacer la foto. Inténtalo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de la prise de vue. Réessayez."
+          }
+        }
+      }
+    },
+    "Scegli fotocamera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera wählen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose camera"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir cámara"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir la caméra"
+          }
+        }
+      }
+    },
+    "Serve l'accesso alla fotocamera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamerazugriff erforderlich"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera access needed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se necesita acceso a la cámara"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accès à l'appareil photo requis"
+          }
+        }
+      }
+    },
+    "Specchia la fotocamera frontale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frontkamera spiegeln"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mirror front camera"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reflejar la cámara frontal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inverser la caméra frontale"
+          }
+        }
+      }
+    },
+    "Spenta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
+          }
+        }
+      }
+    },
+    "Spento" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
+          }
+        }
+      }
+    },
+    "Timer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temporizador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minuteur"
+          }
+        }
+      }
+    },
+    "Tocca il mirino per mettere a fuoco, poi trascina in verticale per regolare l'esposizione. Pizzica per fare zoom: gli obiettivi veri del telefono, poi lo zoom digitale." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf den Sucher, um scharfzustellen, und ziehe dann vertikal, um die Belichtung anzupassen. Zum Zoomen zusammenziehen: zuerst die echten Objektive des Telefons, dann der Digitalzoom."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the viewfinder to focus, then drag vertically to adjust exposure. Pinch to zoom: the phone's real lenses first, then digital zoom."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toca el visor para enfocar y arrastra en vertical para ajustar la exposición. Pellizca para hacer zoom: primero los objetivos reales del teléfono y luego el zoom digital."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Touchez le viseur pour faire la mise au point, puis faites glisser verticalement pour régler l'exposition. Pincez pour zoomer : d'abord les vrais objectifs du téléphone, puis le zoom numérique."
+          }
+        }
+      }
+    },
+    "Versione" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        }
+      }
+    },
+    "Zoom" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
