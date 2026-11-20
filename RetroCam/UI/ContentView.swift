@@ -25,10 +25,12 @@ struct ContentView: View {
     @State private var dragBaseBias: Float?
     @State private var pinchBase: CGFloat?
     @State private var thumbPop = false
+    @State private var shutterSnap = false              // il diaframma dell'otturatore si chiude per un istante allo scatto
     @State private var interfaceOrientation: UIInterfaceOrientation = .portrait
     @State private var sideInsets = UIEdgeInsets.zero    // area sicura della finestra (taglio, isola, angoli)
     @State private var focusConfirmed = true           // fuoco automatico bloccato dopo l'ultimo tocco
     @State private var focusToken = UUID()
+    @State private var uiScale: CGFloat = 1             // scala dei comandi secondo lo schermo (vedi UIScale)
     @State private var focusSelection = false          // AF/MF mostrato: cambia subito, l'obiettivo si adegua dopo
     @Namespace private var focusNamespace
 
@@ -46,7 +48,7 @@ struct ContentView: View {
             if camera.authorization == .denied {
                 CameraAccessView()
             } else {
-                cameraUI.environment(\.colorScheme, .dark)
+                cameraUI.environment(\.colorScheme, .dark).environment(\.uiScale, uiScale)
             }
             // Momento di marca: il diaframma si apre sul nome, poi svanisce nel mirino
             if showLaunch {
@@ -115,6 +117,7 @@ struct ContentView: View {
         guard o != .unknown else { return }
         interfaceOrientation = o
         sideInsets = scene?.keyWindow?.safeAreaInsets ?? .zero
+        if let size = scene?.keyWindow?.bounds.size { uiScale = UIScale.value(for: size) }
         camera.setInterfaceOrientation(o)
     }
 
@@ -124,7 +127,6 @@ struct ContentView: View {
             if gridEnabled {
                 GridOverlay().ignoresSafeArea().allowsHitTesting(false)
             }
-            ViewfinderFrame()
             // Livella (bilanciamento): indica se la foto è dritta; si attiva dal suo pulsante, indipendente dalla griglia
             if levelEnabled { LevelIndicator(orientation: interfaceOrientation) }
             // Ruotando il telefono i due layout si sciolgono l'uno nell'altro invece di scattare
@@ -412,7 +414,7 @@ struct ContentView: View {
             Image(systemName: camera.flashEnabled ? "bolt.fill" : "bolt.slash.fill")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(camera.flashEnabled && camera.recipe.flash != nil ? Brand.champagne : Color.white)
-                .frame(width: 44, height: 44)
+                .frame(width: 44 * uiScale, height: 44 * uiScale)
                 .contentShape(Circle())
         }
         .disabled(camera.recipe.flash == nil)
@@ -459,7 +461,7 @@ struct ContentView: View {
                 }
             }
             .font(.system(size: 18, weight: .semibold))
-            .frame(width: 44, height: 44)
+            .frame(width: 44 * uiScale, height: 44 * uiScale)
                 .contentShape(Circle())
         }
         .brandCircle(active: timerOptions[timerIndex] != 0)
@@ -475,7 +477,7 @@ struct ContentView: View {
             Image(systemName: "level")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(levelEnabled ? Brand.champagne : Color.white)
-                .frame(width: 44, height: 44)
+                .frame(width: 44 * uiScale, height: 44 * uiScale)
                 .contentShape(Circle())
         }
         .brandCircle(active: levelEnabled)
@@ -490,7 +492,7 @@ struct ContentView: View {
             Image(systemName: "squareshape.split.3x3")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(gridEnabled ? Brand.champagne : Color.white)
-                .frame(width: 44, height: 44)
+                .frame(width: 44 * uiScale, height: 44 * uiScale)
                 .contentShape(Circle())
         }
         .brandCircle(active: gridEnabled)
@@ -507,7 +509,7 @@ struct ContentView: View {
                 Image(systemName: camera.livePhotoEnabled ? "livephoto" : "livephoto.slash")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(camera.livePhotoEnabled ? Brand.champagne : Color.white)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 44 * uiScale, height: 44 * uiScale)
                 .contentShape(Circle())
             }
             .brandCircle(active: camera.livePhotoEnabled)
@@ -524,7 +526,7 @@ struct ContentView: View {
             Image(systemName: "arrow.triangle.2.circlepath.camera")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
+                .frame(width: 44 * uiScale, height: 44 * uiScale)
                 .contentShape(Circle())
         }
         .brandCircle()
@@ -546,13 +548,13 @@ struct ContentView: View {
                         Image(systemName: "photo").foregroundStyle(.white)
                     }
                 }
-                .frame(width: 56, height: 56)
+                .frame(width: 56 * uiScale, height: 56 * uiScale)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                 if camera.isProcessing {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color.black.opacity(0.45))
-                        .frame(width: 56, height: 56)
+                        .frame(width: 56 * uiScale, height: 56 * uiScale)
                     ApertureSpinner(size: 28)
                 }
             }
@@ -565,7 +567,8 @@ struct ContentView: View {
 
     private var shutterButton: some View {
         Button(action: shoot) {
-            ShutterLabel(armed: timerTask != nil, video: camera.captureMode == .video, recording: camera.isRecording)
+            ShutterLabel(armed: timerTask != nil, video: camera.captureMode == .video, recording: camera.isRecording,
+                         snap: shutterSnap)
         }
         .buttonStyle(ShutterStyle())
         .accessibilityLabel(timerTask != nil ? "Annulla timer"
@@ -585,7 +588,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 56 * uiScale, height: 56 * uiScale)
             .contentShape(Circle())
         }
         .brandCircle()
@@ -640,18 +643,21 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.2), value: camera.livePhotoSupported)
     }
 
+    /// Diametro della ghiera del fuoco: segue la scala dello schermo (250 in orizzontale, 220 in verticale a scala 1).
+    private var ringSize: CGFloat { (isLandscape ? 250 : 220) * uiScale }
+
     @ViewBuilder private var focusRing: some View {
         if focusSelection {
             FocusRingView(lensPosition: $camera.lensPosition, maxDiopters: camera.maxDiopters) {
                 camera.applyLensPosition($0)
             }
-            .frame(width: isLandscape ? 250 : 220, height: isLandscape ? 250 : 220)
+            .frame(width: ringSize, height: ringSize)
             .transition(.scale(scale: 0.85).combined(with: .opacity))
         }
     }
 
     /// Zoom manuale: ghiera verticale nello stile di quella del fuoco, sul bordo destro. Compare solo in MF.
-    /// Trascinando in alto si ingrandisce; un tocco sul valore torna a 1×.
+    /// Trascinando in basso si ingrandisce, in alto si va verso il grandangolo (0,5×); un tocco sul valore torna a 1×.
     @ViewBuilder private var zoomSliderLayer: some View {
         if focusSelection {
             HStack {
@@ -673,7 +679,6 @@ struct ContentView: View {
             Spacer()
             HUDLabel(model: camera.hud)
             zoomPill
-            exposureStrip
             // Riga sopra l'otturatore: comandi (sinistra), AF/MF (centro), cambio frontale/posteriore (destra)
             ZStack {
                 focusModeToggle
@@ -734,13 +739,12 @@ struct ContentView: View {
                 toastView
                 Spacer()
                 zoomPill
-                exposureStrip
                 modeSwitch
             }
             .padding(.vertical, 8)
 
             // AF/MF a sinistra della ghiera (che sta al centro, 250 pt, con l'etichetta MIN sul lato sinistro)
-            focusModeToggle.offset(x: -235)
+            focusModeToggle.offset(x: -235 * uiScale)
         }
     }
 
@@ -820,7 +824,7 @@ struct ContentView: View {
                         } label: {
                             Text(CameraManager.lensLabel(stop))
                                 .font(Brand.mono(13))
-                                .frame(width: 46, height: 40)
+                                .frame(width: 46 * uiScale, height: 40 * uiScale)
                                 .foregroundStyle(on ? Brand.champagne : Color.white.opacity(0.85))
                                 .background(on ? Color.white.opacity(0.2) : Color.clear, in: Capsule())
                                 .contentShape(Capsule())
@@ -887,17 +891,6 @@ struct ContentView: View {
         }
     }
 
-    // MARK: Luminosità (modalità manuale)
-    /// In manuale il tocco sul mirino non regola l'esposizione: la luminosità si imposta da questa barra.
-    @ViewBuilder private var exposureStrip: some View {
-        if focusSelection {
-            ExposureStrip(bias: camera.exposureBias,
-                          onChange: { camera.setExposureBias($0) },
-                          onReset: { Haptics.shared.selection(); camera.setExposureBias(0) })
-                .transition(.scale(scale: 0.9).combined(with: .opacity))
-        }
-    }
-
     private func popThumbnail() {
         withAnimation(.spring(duration: 0.25)) { thumbPop = true }
         Task {
@@ -942,6 +935,12 @@ struct ContentView: View {
             return
         }
         Haptics.shared.shutterClick(); SoundFX.shared.shutter()
+        // Anche con Camera Control o tasti volume il bottone risponde: il diaframma si chiude e si riapre con una molla
+        withAnimation(.easeIn(duration: 0.07)) { shutterSnap = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(90))
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { shutterSnap = false }
+        }
         let white = camera.flashEnabled && camera.recipe.flash != nil
         flashIsWhite = white
         withAnimation(.easeOut(duration: 0.08)) { shutterFlash = true }
@@ -982,6 +981,8 @@ private struct ShutterLabel: View {
     var armed = false
     var video = false
     var recording = false
+    var snap = false
+    @Environment(\.uiScale) private var uiScale
 
     var body: some View {
         ZStack {
@@ -992,11 +993,11 @@ private struct ShutterLabel: View {
                 // Video: pallino rosso che, in registrazione, diventa un quadrato (come l'app Fotocamera)
                 RoundedRectangle(cornerRadius: recording ? 8 : 31, style: .continuous)
                     .fill(Color(red: 0.92, green: 0.22, blue: 0.18))
-                    .frame(width: recording ? 34 : 62, height: recording ? 34 : 62)
+                    .frame(width: (recording ? 34 : 62) * uiScale, height: (recording ? 34 : 62) * uiScale)
                     .opacity(armed ? 0.6 : 1)
             } else {
                 // Il diaframma si chiude quando il timer è armato
-                ApertureShape(openness: armed ? 0.15 : 0.55)
+                ApertureShape(openness: snap ? 0.04 : (armed ? 0.15 : 0.55))
                     .fill(Brand.metal)
                     .padding(13)
                     .shadow(color: Brand.champagne.opacity(armed ? 0 : 0.3), radius: 8)
@@ -1005,7 +1006,8 @@ private struct ShutterLabel: View {
         .animation(.spring(duration: 0.3), value: armed)
         .animation(.spring(duration: 0.3), value: recording)
         .animation(.smooth(duration: 0.25), value: video)
-        .frame(width: 84, height: 84)
+        .scaleEffect(snap ? 0.9 : 1)
+        .frame(width: 84 * uiScale, height: 84 * uiScale)
         // Il cerchio e il pallino interno lasciano un anello vuoto in mezzo: senza questo, toccare lì non scatta
         .contentShape(Circle())
     }
@@ -1026,7 +1028,7 @@ private struct ShutterStyle: ButtonStyle {
 
 /// Zoom manuale nello stile della ghiera di messa a fuoco: corpo in vetro con zigrinatura che scorre,
 /// indice giallo fisso, click aptico a ogni tacca e colpo più forte a fine corsa. Si trascina in verticale:
-/// in alto = più zoom. Scala logaritmica (ogni metà corsa è lo stesso rapporto di zoom).
+/// in basso = più zoom. Scala logaritmica (ogni metà corsa è lo stesso rapporto di zoom).
 private struct ZoomDialView: View {
     var zoom: CGFloat
     var minZoom: CGFloat
@@ -1035,8 +1037,9 @@ private struct ZoomDialView: View {
     var onChange: (CGFloat) -> Void
     var onReset: () -> Void
 
-    private let width: CGFloat = 56
-    private let height: CGFloat = 230
+    @Environment(\.uiScale) private var uiScale
+    private var width: CGFloat { 56 * uiScale }
+    private var height: CGFloat { 230 * uiScale }
     private let travel: CGFloat = 480           // punti di scorrimento per l'intera corsa
     private let tickStep: CGFloat = 8           // una tacca ogni 8 punti
     @State private var dragFraction: CGFloat?   // posizione locale durante il trascinamento (il valore reale arriva in ritardo)
@@ -1067,10 +1070,12 @@ private struct ZoomDialView: View {
                 Canvas { ctx, sz in
                     let midY = sz.height / 2
                     let offset = f * travel
-                    let first = Int(((offset - midY) / tickStep).rounded(.down)) - 1
-                    let last = Int(((offset + midY) / tickStep).rounded(.up)) + 1
+                    // Tacche visibili: quelle con y tra 0 e l'altezza, cioè i * passo + offset tra -midY e +midY
+                    let first = Int(((-midY - offset) / tickStep).rounded(.down)) - 1
+                    let last = Int(((midY - offset) / tickStep).rounded(.up)) + 1
                     for i in first...last {
-                        let y = midY - (CGFloat(i) * tickStep - offset)
+                        // Le tacche seguono il dito (in alto salgono, in basso scendono); lo zoom va al contrario
+                        let y = midY + (CGFloat(i) * tickStep + offset)
                         let long = i % 5 == 0
                         var p = Path()
                         p.move(to: CGPoint(x: sz.width * (long ? 0.28 : 0.36), y: y))
@@ -1135,6 +1140,7 @@ private struct ZoomDialView: View {
         lastY = y; lastTime = now
 
         // Verso l'alto = più zoom. Lento = regolazione fine, veloce = corsa lunga
+        // Verso scelto dall'utente: trascinando in basso lo zoom aumenta, in alto diminuisce
         let raw = Double(last - y) / Double(travel)
         let delta = raw * DialDynamics.gain(forSpeed: abs(raw) / dt)
         velocity = velocity * 0.6 + (delta / dt) * 0.4

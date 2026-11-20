@@ -59,19 +59,12 @@ struct CameraPickerSheet: View {
                 } header: {
                     Text("Controlli")
                 }
-                // Firma in fondo alle impostazioni: marchio e versione, senza occupare spazio ai comandi
+                // Firma in fondo alle impostazioni: solo il marchio
                 Section {
-                    VStack(spacing: 6) {
-                        BrandMark(apertureSize: 44, openness: 0.55)
-                        if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-                            Text(verbatim: "v\(version)")
-                                .font(Brand.mono(11, weight: .regular))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .listRowBackground(Color.clear)
+                    BrandMark(apertureSize: 44, openness: 0.55)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .listRowBackground(Color.clear)
                 }
             }
             .tint(Brand.champagne)

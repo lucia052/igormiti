@@ -59,10 +59,13 @@ struct FocusRingView: View {
                     .glassCapsule()
                     .offset(y: size * 0.22)
 
-                Text("∞").font(.system(size: 16, design: .monospaced)).foregroundStyle(.white)
+                // Estremi della corsa: + verso l'infinito (a destra), − verso la distanza minima (a sinistra)
+                Image(systemName: "plus").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
                     .offset(x: size / 2 + 12)
-                Text(minDistanceText).font(.system(size: 10, design: .monospaced)).foregroundStyle(.white.opacity(0.8))
-                    .offset(x: -size / 2 - 18)
+                    .accessibilityHidden(true)
+                Image(systemName: "minus").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
+                    .offset(x: -size / 2 - 12)
+                    .accessibilityHidden(true)
             }
             .frame(width: size, height: size)
             .contentShape(Circle())
@@ -136,13 +139,6 @@ struct FocusRingView: View {
     }
 
     private func tickIndex(_ value: Double) -> Int { Int(value * travel / tickStep) }
-
-    /// Distanza minima di messa a fuoco di questo modello (da `minimumFocusDistance`), per esempio "12 cm"; senza dato, "MIN".
-    private var minDistanceText: String {
-        guard maxDiopters > 0.5, maxDiopters < 100 else { return "MIN" }
-        let cm = Int((100 / maxDiopters).rounded())
-        return "\(cm) cm"
-    }
 
     /// Stima: la posizione della lente è circa lineare in diottrie. Calibra con `minimumFocusDistance`.
     private var distanceText: String {

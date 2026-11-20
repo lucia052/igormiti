@@ -98,15 +98,10 @@ final class SoundFX {
             var s: Double
             switch kind {
             case .shutter:
-                // Un solo "tic" breve e morbido, quasi impercettibile: attacco di 3 ms (niente scatto secco),
-                // una nota alta che svanisce in fretta e un tocco di corpo grave sotto
-                s = softTone(t, freq: 1250, attack: 0.003, decay: 0.014) * 0.24
-                  + softTone(t, freq: 190, attack: 0.004, decay: 0.022) * 0.14
-                  // Timbro metallico: parziali non armoniche (rapporti da lamella di metallo) che si spengono piano,
-                  // come il tintinnio delle lamelle del diaframma dopo lo scatto
-                  + softTone(t, freq: 2350, attack: 0.002, decay: 0.05) * 0.07
-                  + softTone(t, freq: 3920, attack: 0.002, decay: 0.035) * 0.04
-                  + softTone(t, freq: 6480, attack: 0.002, decay: 0.022) * 0.02
+                // Otturatore meccanico a due tempi, come una reflex: "clac" di apertura (più grave e pieno)
+                // e, 70 ms dopo, "clac" di chiusura (più secco e leggero)
+                s = click(t, at: 0, decay: 0.012, tone: 1500, thump: 150, noise: &noise) * 0.55
+                  + click(t, at: 0.07, decay: 0.009, tone: 2100, thump: 230, noise: &noise) * 0.4
             case .tick:
                 // Tocco sordo e breve, senza il sibilo acuto di prima
                 s = softTone(t, freq: 700, attack: 0.004, decay: 0.014) * 0.32

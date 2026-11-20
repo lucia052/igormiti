@@ -27,6 +27,21 @@ enum Brand {
     }
 }
 
+extension EnvironmentValues {
+    /// Scala globale dei comandi, calcolata sulle dimensioni reali della finestra (1 = iPhone da 393 pt):
+    /// su un iPhone compatto i comandi si stringono un po', su iPhone grandi e iPad crescono, senza mai uscire dai limiti.
+    @Entry var uiScale: CGFloat = 1
+}
+
+enum UIScale {
+    /// Scala per una finestra di queste dimensioni, dal lato corto (stabile in verticale e in orizzontale).
+    static func value(for size: CGSize) -> CGFloat {
+        let shortSide = min(size.width, size.height)
+        guard shortSide > 0 else { return 1 }
+        return min(max(shortSide / 393, 0.9), 1.25)
+    }
+}
+
 /// Diaframma a sei lamelle. `openness` va da 0 (chiuso) a 1 (aperto): il foro centrale si allarga.
 struct ApertureShape: Shape {
     var openness: CGFloat = 0.5

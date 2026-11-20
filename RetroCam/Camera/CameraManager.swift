@@ -615,6 +615,41 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
         return devices.indices.contains(index) ? devices[index] : devices.first
     }
 
+    /// Da chiamare sulla sessionQueue, in manuale. Se lo zoom richiesto appartiene a un altro obiettivo fisico,
+    /// passa a quello (mantenendo la messa a fuoco manuale) e lo restituisce; altrimenti nil.
+    private func swapManualLens(forDisplay display: CGFloat, current: AVCaptureDevice) -> AVCaptureDevice? {
+        guard let virtual = camera(.back), virtual.isVirtualDevice else { return nil }
+        let lenses = virtual.constituentDevices
+        guard lenses.count == lensFactors.count else { return nil }
+        // Isteresi: l'obiettivo in uso resta tale anche un po' sotto il suo inizio (0,06×), così fermando il dito
+        // proprio sul confine tra due obiettivi non si passa avanti e indietro a ogni lettura
+        var wanted = 0
+        for (i, f) in lensFactors.enumerated() {
+            let start = f * lensMultiplier
+            let inUse = abs(start - swappedBase) < 0.01
+            if start <= display + (inUse ? 0.06 : 0.01) { wanted = i }
+        }
+        let physical = lenses[wanted]
+        guard physical.uniqueID != current.uniqueID, physical.isLockingFocusWithCustomLensPositionSupported else { return nil }
+
+        DispatchQueue.main.async { self.isSwitchingLens = true }     // stesso velo del cambio AF ↔ MF
+        guard switchInput(to: physical) else {
+            DispatchQueue.main.async { self.isSwitchingLens = false }
+            return nil
+        }
+        swappedBase = max(lensFactors[wanted] * lensMultiplier, 0.01)
+        if (try? physical.lockForConfiguration()) != nil {
+            physical.setFocusModeLocked(lensPosition: deviceLensPosition(lastLensPosition))
+            physical.unlockForConfiguration()
+        }
+        let minFocus = physical.minimumFocusDistance
+        let diopters: Float = minFocus > 0 ? 1000 / Float(minFocus) : 10
+        DispatchQueue.main.async { self.maxDiopters = diopters }
+        installSystemControls(for: physical)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { self.isSwitchingLens = false }
+        return physical
+    }
+
     private func lensIndex(for v: AVCaptureDevice) -> Int {
         var index = 0
         for (i, f) in lensFactors.enumerated() where f <= v.videoZoomFactor + 0.01 { index = i }
@@ -716,12 +751,23 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
                case let shownZoom = d.videoZoomFactor * lensMultiplier,
                case let index = lensIndex(for: d),
                let physical = physicalDevice(forVirtual: d), switchInput(to: physical) {
+                // La ghiera dello zoom copre tutti gli obiettivi (dal grandangolo al massimo del modello): in manuale
+                // si passa da uno all'altro mentre la si trascina (vedi `swapManualLens`)
+                let fullFloor = max((lensFactors.first ?? 1) * lensMultiplier, 0.01)
+                // Il massimo mostrato è quello raggiungibile davvero: a zoom alto lavora l'ultimo obiettivo (il più lungo),
+                // il cui limite può essere più basso di quello della fotocamera virtuale. Così la ghiera non supera mai ciò che l'immagine segue.
+                let virtualCeiling = d.maxAvailableVideoZoomFactor * lensMultiplier
+                var reachable = virtualCeiling
+                if let longest = d.constituentDevices.last, d.constituentDevices.count == lensFactors.count,
+                   let longestStart = lensFactors.last {
+                    reachable = min(virtualCeiling, longest.maxAvailableVideoZoomFactor * longestStart * lensMultiplier)
+                }
+                let fullCeiling = max(1, min(reachable, Self.maxDisplayZoom))
                 d = physical
                 // Sull'obiettivo fisico lo zoom 1.0 corrisponde allo zoom mostrato di quell'obiettivo: si mantiene lo zoom attuale
                 let base = max(lensFactors[min(index, lensFactors.count - 1)] * lensMultiplier, 0.01)
                 swappedBase = base; swappedForManual = true
-                let ceiling = max(1, min(physical.maxAvailableVideoZoomFactor * base, Self.maxDisplayZoom))     // massimo di questo obiettivo, tetto 25×
-                DispatchQueue.main.async { self.zoomFloor = base; self.zoomCeiling = ceiling }
+                DispatchQueue.main.async { self.zoomFloor = fullFloor; self.zoomCeiling = fullCeiling }
                 if (try? physical.lockForConfiguration()) != nil {
                     let upper = min(physical.maxAvailableVideoZoomFactor, Self.maxDisplayZoom / base)
                     let target = min(max(shownZoom / base, physical.minAvailableVideoZoomFactor), upper)
@@ -842,8 +888,10 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
         guard !alreadyQueued else { return }
         sessionQueue.async { [self] in
             stateLock.lock(); let request = zoomRequest; zoomRequest = nil; stateLock.unlock()
-            guard let request, let d = device else { return }
+            guard let request, var d = device else { return }
             let display = request.display, ramp = request.ramp
+            // In manuale, oltre i limiti dell'obiettivo in uso si passa a quello adatto (in fondo alla ghiera, il grandangolo)
+            if swappedForManual, let lens = swapManualLens(forDisplay: display, current: d) { d = lens }
             // Con la messa a fuoco manuale si usa un solo obiettivo fisico: lo zoom è digitale su quell'obiettivo
             let mult = swappedForManual ? swappedBase : max(lensMultiplier, 0.01)
             let upper = min(d.maxAvailableVideoZoomFactor, Self.maxDisplayZoom / mult)       // limite del modello di iPhone, con tetto 25×
