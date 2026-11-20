@@ -9,7 +9,27 @@ enum CameraAuth { case unknown, authorized, denied }
 /// Contenitore del solo frame di anteprima: così il mirino si aggiorna a 30 fps
 /// senza ridisegnare tutta l'interfaccia.
 final class PreviewModel: ObservableObject {
-    @Published var image: CGImage?
+    /// Fotogramma più recente. Non è `@Published`: si scrive nel layer senza far ricalcolare SwiftUI a ogni frame.
+    /// Da usare solo sul main thread.
+    var image: CGImage? {
+        didSet {
+            // Niente animazione implicita del layer: il cambio di fotogramma deve essere netto
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            layer?.contents = image
+            CATransaction.commit()
+            if image != nil && !hasImage { hasImage = true }
+        }
+    }
+    /// Cambia una sola volta, al primo fotogramma: toglie lo sfondo di riserva.
+    @Published private(set) var hasImage = false
+    /// Layer della vista del mirino (impostato dalla vista).
+    weak var layer: CALayer?
+}
+
+/// Testo dei dati di scatto (ƒ/, tempo, ISO) separato dal manager: cambiandolo non si ridisegna tutta l'interfaccia.
+final class HUDModel: ObservableObject {
+    @Published var text = "ƒ/1.8 · 1/125 · ISO 200"
 }
 
 /// Gestisce sessione di cattura, rendering live dei filtri, maschera persona, messa a fuoco manuale e salvataggio.
@@ -19,8 +39,8 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
 
     // MARK: Stato per la UI
     let preview = PreviewModel()
+    let hud = HUDModel()
     @Published var lastPhoto: UIImage?
-    @Published var hudText = "ƒ/1.8 · 1/125 · ISO 200"
     @Published var saveCounter = 0
     @Published var recipe: CameraRecipe = CameraRecipe.all[0] { didSet { syncRenderState() } }
     @Published var flashEnabled = true { didSet { syncRenderState() } }
@@ -96,6 +116,12 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     private var manualActive = false
     private var realFlashAvailable = false      // il dispositivo attivo ha un flash fisico (LED o schermo)
     private var frameCount = 0
+    // Ultimo frame pronto e relativo testo: sul main se ne consegna uno solo alla volta, così i frame non si accumulano
+    private var zoomRequest: (display: CGFloat, ramp: Bool)?      // ultima richiesta di zoom non ancora applicata
+    private var biasRequest: Float?                               // ultima compensazione dell'esposizione non ancora applicata
+    private var pendingFrame: CGImage?
+    private var pendingHUD: String?
+    private var deliveryScheduled = false
     private var renderLive = false              // Live Photo attiva e supportata
     /// Stato di uno scatto Live Photo (per uniqueID): la foto filtrata e il filmato arrivano in momenti diversi.
     private struct LivePending {
@@ -118,8 +144,11 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
         super.init()
         // Frontale a specchio di default (alzi la destra, si alza la destra): modificabile nelle impostazioni
         UserDefaults.standard.register(defaults: ["mirrorFront": true])
+        reloadMirrorFront()
         applyDefaultCamera()
         syncRenderState()
+        // LUT di tutte le fotocamere pronte prima del primo uso (in background)
+        processQueue.async { [engine] in engine.prewarm(CameraRecipe.all) }
         NotificationCenter.default.addObserver(
             forName: AVCaptureDevice.subjectAreaDidChangeNotification, object: nil, queue: nil
         ) { [weak self] _ in self?.resetToContinuous() }
@@ -181,6 +210,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     func start() {
+        reloadMirrorFront()         // può essere cambiata dalle Impostazioni di iOS mentre l'app era in secondo piano
         DispatchQueue.main.async { self.applyDefaultCamera() }
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
@@ -242,10 +272,17 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     /// Impostazione "Specchia la frontale" (Impostazioni dell'app): vale per mirino e foto, solo sulla frontale.
-    private var mirrorFront: Bool { UserDefaults.standard.bool(forKey: "mirrorFront") }
+    /// Copia in memoria dell'impostazione: serve a ogni fotogramma (30 volte al secondo) e leggere `UserDefaults` ogni volta costa.
+    private var _mirrorFront = true
+    private var mirrorFront: Bool { stateLock.lock(); defer { stateLock.unlock() }; return _mirrorFront }
+    private func reloadMirrorFront() {
+        let value = UserDefaults.standard.bool(forKey: "mirrorFront")
+        stateLock.lock(); _mirrorFront = value; stateLock.unlock()
+    }
 
     /// Da chiamare quando l'impostazione cambia.
     func refreshMirroring() {
+        reloadMirrorFront()
         sessionQueue.async { [self] in
             configureConnections(front: (device?.position ?? .back) == .front)
         }
@@ -446,6 +483,11 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
 
     // MARK: Scatto
     func capturePhoto() {
+        // Troppi scatti ancora in elaborazione: si aspetta, invece di riempire la memoria e farsi chiudere dal sistema
+        if pendingCount >= DeviceProfile.maxPendingCaptures {
+            toast = String(localized: "Sto ancora elaborando gli scatti precedenti.")
+            return
+        }
         DispatchQueue.main.async { self.pendingCount += 1 }
         sessionQueue.async { [self] in
             guard session.isRunning else { finishOne(toast: String(localized: "Fotocamera non disponibile.")); return }
@@ -668,8 +710,17 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     // MARK: Zoom ed esposizione
     /// `display` è lo zoom mostrato (0.5, 1, 3…). Oltre l'ultimo obiettivo fisico lo zoom è digitale (fino a 10×).
     func setZoom(_ display: CGFloat, ramp: Bool = true) {
+        // Col pizzico arrivano decine di richieste al secondo: ogni scrittura sulla fotocamera costa (blocco di configurazione),
+        // quindi se una è già in attesa la si sostituisce con quella più recente invece di accodarne altre.
+        stateLock.lock()
+        let alreadyQueued = zoomRequest != nil
+        zoomRequest = (display, ramp)
+        stateLock.unlock()
+        guard !alreadyQueued else { return }
         sessionQueue.async { [self] in
-            guard let d = device else { return }
+            stateLock.lock(); let request = zoomRequest; zoomRequest = nil; stateLock.unlock()
+            guard let request, let d = device else { return }
+            let display = request.display, ramp = request.ramp
             // Con la messa a fuoco manuale si usa un solo obiettivo fisico: lo zoom è digitale su quell'obiettivo
             let mult = swappedForManual ? swappedBase : max(lensMultiplier, 0.01)
             let upper = min(d.maxAvailableVideoZoomFactor, Self.maxDisplayZoom / mult)       // limite del modello di iPhone, con tetto 25×
@@ -685,16 +736,23 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
                 }
             } catch { }
             let shown = ((target * mult) * 100).rounded() / 100
-            DispatchQueue.main.async { self.zoom = shown }
+            DispatchQueue.main.async { if abs(self.zoom - shown) > 0.004 { self.zoom = shown } }
         }
     }
 
     func setExposureBias(_ value: Float) {
         let clamped = min(2, max(-2, value))
-        DispatchQueue.main.async { self.exposureBias = clamped }
+        DispatchQueue.main.async { self.exposureBias = clamped }      // il cursore segue subito il dito
+        // La scrittura sulla fotocamera invece si unisce: conta solo il valore più recente
+        stateLock.lock()
+        let alreadyQueued = biasRequest != nil
+        biasRequest = clamped
+        stateLock.unlock()
+        guard !alreadyQueued else { return }
         sessionQueue.async { [self] in
-            guard let d = device else { return }
-            let b = min(d.maxExposureTargetBias, max(d.minExposureTargetBias, clamped))
+            stateLock.lock(); let latest = biasRequest; biasRequest = nil; stateLock.unlock()
+            guard let latest, let d = device else { return }
+            let b = min(d.maxExposureTargetBias, max(d.minExposureTargetBias, latest))
             do {
                 try d.lockForConfiguration()
                 defer { d.unlockForConfiguration() }
@@ -868,9 +926,21 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             let dur = max(d.exposureDuration.seconds, 0.0001)
             hud = String(format: "ƒ/%.1f · 1/%ld · ISO %ld", d.lensAperture, Int((1 / dur).rounded()), Int(d.iso))
         }
-        DispatchQueue.main.async {
-            self.preview.image = cg
-            if let hud { self.hudText = hud }
+        // Se il main non ha ancora consegnato il frame precedente, lo si sostituisce con questo (più recente)
+        stateLock.lock()
+        pendingFrame = cg
+        if let hud { pendingHUD = hud }
+        let needsDelivery = !deliveryScheduled
+        deliveryScheduled = true
+        stateLock.unlock()
+        guard needsDelivery else { return }
+        DispatchQueue.main.async { [self] in
+            stateLock.lock()
+            let frame = pendingFrame, text = pendingHUD
+            pendingFrame = nil; pendingHUD = nil; deliveryScheduled = false
+            stateLock.unlock()
+            if let frame { preview.image = frame }
+            if let text, text != self.hud.text { self.hud.text = text }
         }
     }
 }
@@ -1062,7 +1132,10 @@ extension CameraManager {
             guard writer.canAdd(stillInput) else { return nil }
             writer.add(stillInput)
 
-            guard writer.startWriting(), reader.startReading() else { return nil }
+            guard writer.startWriting(), reader.startReading() else {
+                try? FileManager.default.removeItem(at: outURL)      // il file può essere già stato creato a metà
+                return nil
+            }
             writer.startSession(atSourceTime: start)
 
             let stillItem = AVMutableMetadataItem()

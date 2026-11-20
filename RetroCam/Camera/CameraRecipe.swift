@@ -19,7 +19,7 @@ enum FrameStyle: Equatable { case none, instant }
 /// Una "ricetta" descrive una fotocamera. Aggiungerne una = aggiungere dati, non codice.
 struct CameraRecipe: Identifiable, Equatable {
     let id: String
-    var name: String            // nomi reali delle fotocamere (marchi di terzi: valutare il rischio in App Store)
+    var name: String            // nomi generici: niente marchi di terzi
     var subtitle: String
     var symbol: String
     var gradient: [Color]
@@ -87,11 +87,11 @@ extension CameraRecipe {
 
     /// Compatta 1": flash ambrato sul soggetto, sfondo scuro tipo tramonto, pelle morbida.
     static let g7x: CameraRecipe = {
-        var r = CameraRecipe(id: "g7x", name: "Canon G7X",
+        var r = CameraRecipe(id: "g7x", name: "Ambra",
                              subtitle: "Flash ambrato · pelle morbida",
                              symbol: "camera.aperture",
                              gradient: [Color(red: 1, green: 0.54, blue: 0.12), Color(red: 0.48, green: 0.18, blue: 0.07)])
-        // Sensore da 1": pelle dorata e luminosa, colori Canon caldi e saturi, ombre profonde color caramello
+        // Sensore da 1": pelle dorata e luminosa, colori caldi e saturi, ombre profonde color caramello
         // Riferimenti prima/dopo: immagine più scura e dorata, contrasto forte, neri profondi, pelle con bagliore
         // Ricerca: esposizione luminosa, pelle calda con una punta di rosa, neri ricchi, luci leggermente calde
         r.warmth = 0.2; r.tint = 0.07; r.exposureEV = 0.22; r.contrast = 1.15; r.saturation = 1.15
@@ -110,7 +110,7 @@ extension CameraRecipe {
 
     /// Compatta CCD anni 2000: flash duro, leggermente sovraesposta, bloom, nitidezza esagerata, date stamp.
     static let digicam: CameraRecipe = {
-        var r = CameraRecipe(id: "digicam", name: "Canon IXUS",
+        var r = CameraRecipe(id: "digicam", name: "Cristallo",
                              subtitle: "CCD · flash diretto · date stamp",
                              symbol: "camera.fill",
                              gradient: [Color(red: 0.49, green: 0.77, blue: 1), Color(red: 0.15, green: 0.31, blue: 0.48)])
@@ -132,7 +132,7 @@ extension CameraRecipe {
 
     /// Istantanea: neri lattiginosi, bianchi caldi, cornice di carta con data a mano, quadrata.
     static let polaroid: CameraRecipe = {
-        var r = CameraRecipe(id: "polaroid", name: "Polaroid 600",
+        var r = CameraRecipe(id: "polaroid", name: "Istante",
                              subtitle: "Cornice bianca · tinte morbide",
                              symbol: "photo.artframe",
                              gradient: [Color(red: 0.96, green: 0.94, blue: 0.88), Color(red: 0.79, green: 0.73, blue: 0.60)])
@@ -152,7 +152,7 @@ extension CameraRecipe {
 
     /// Camcorder VHS: sbavatura del colore, scanline, tracking, neri alzati, mirino REC + data.
     static let handycam: CameraRecipe = {
-        var r = CameraRecipe(id: "handycam", name: "Sony Handycam",
+        var r = CameraRecipe(id: "handycam", name: "Nastro",
                              subtitle: "REC · tracking · mirino",
                              symbol: "video.fill",
                              gradient: [Color(red: 0.56, green: 0.56, blue: 0.58), Color(red: 0.11, green: 0.11, blue: 0.12)])

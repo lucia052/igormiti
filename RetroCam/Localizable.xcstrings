@@ -1002,6 +1002,9 @@
         }
       }
     },
+    "sec" : {
+
+    },
     "Serve l'accesso alla fotocamera" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1117,6 +1120,9 @@
           }
         }
       }
+    },
+    "Sto ancora elaborando gli scatti precedenti." : {
+
     },
     "Timer" : {
       "extractionState" : "manual",

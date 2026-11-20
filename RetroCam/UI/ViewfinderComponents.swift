@@ -1,21 +1,58 @@
 import SwiftUI
 
-/// Il frame filtrato. Osserva solo `PreviewModel`: si aggiorna a ogni frame senza toccare il resto della UI.
+/// Il frame filtrato. I fotogrammi non passano da SwiftUI: `PreviewModel` li scrive direttamente nel layer della vista
+/// sotto, così a 30 fps il thread principale non ricalcola nessuna vista e i tocchi restano pronti.
+/// Lo sfondo di riserva compare solo finché non arriva il primo fotogramma.
 struct ViewfinderLayer: View {
     @ObservedObject var preview: PreviewModel
     var pixelated: Bool
     var square: Bool
 
     var body: some View {
-        if let cg = preview.image {
-            let img = Image(decorative: cg, scale: 1, orientation: .up)
-                .resizable()
-                .interpolation(pixelated ? .none : .medium)
-            if square { img.scaledToFit() } else { img.scaledToFill() }
-        } else {
-            LinearGradient(colors: [Color(red: 0.9, green: 0.65, blue: 0.44), Color(red: 0.08, green: 0.07, blue: 0.1)],
-                           startPoint: .top, endPoint: .bottom)
+        ZStack {
+            if !preview.hasImage {
+                LinearGradient(colors: [Color(red: 0.9, green: 0.65, blue: 0.44), Color(red: 0.08, green: 0.07, blue: 0.1)],
+                               startPoint: .top, endPoint: .bottom)
+            }
+            FrameLayerView(preview: preview, pixelated: pixelated, square: square)
         }
+    }
+}
+
+/// Vista UIKit il cui layer riceve i fotogrammi. Non intercetta i tocchi: restano ai gesti di SwiftUI.
+private struct FrameLayerView: UIViewRepresentable {
+    let preview: PreviewModel
+    var pixelated: Bool
+    var square: Bool
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        view.layer.masksToBounds = true
+        preview.layer = view.layer
+        view.layer.contents = preview.image          // se un fotogramma c'è già (la vista viene ricreata)
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        let layer = view.layer
+        preview.layer = layer
+        // Come prima: la foto intera tiene il rapporto (istantanea quadrata), le altre riempiono lo schermo ritagliando i bordi
+        layer.contentsGravity = square ? .resizeAspect : .resizeAspectFill
+        layer.magnificationFilter = pixelated ? .nearest : .linear
+        layer.minificationFilter = .linear
+    }
+}
+
+/// Dati di scatto sopra l'otturatore. Osserva solo `HUDModel`: l'aggiornamento non tocca il resto dell'interfaccia.
+struct HUDLabel: View {
+    @ObservedObject var model: HUDModel
+
+    var body: some View {
+        Text(model.text)
+            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .foregroundStyle(.white.opacity(0.85))
     }
 }
 
@@ -28,7 +65,7 @@ struct FocusReticle: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 6).stroke(searching ? Color.white : Color.yellow, lineWidth: searching ? 1 : 1.5)
+            RoundedRectangle(cornerRadius: 6).stroke(searching ? Color.white : Brand.champagne, lineWidth: searching ? 1 : 1.5)
                 .frame(width: 78, height: 78)
                 .scaleEffect(searching && breathe ? 1.1 : 1)
                 .animation(searching ? .easeInOut(duration: 0.45).repeatForever(autoreverses: true) : .spring(response: 0.25, dampingFraction: 0.55),
@@ -36,16 +73,16 @@ struct FocusReticle: View {
                 .animation(.easeInOut(duration: 0.2), value: searching)
                 .onAppear { breathe = true }
             // Tacche al centro dei lati
-            Rectangle().fill(Color.yellow).frame(width: 1.5, height: 7).offset(y: -36)
-            Rectangle().fill(Color.yellow).frame(width: 1.5, height: 7).offset(y: 36)
-            Rectangle().fill(Color.yellow).frame(width: 7, height: 1.5).offset(x: -36)
-            Rectangle().fill(Color.yellow).frame(width: 7, height: 1.5).offset(x: 36)
-            Capsule().fill(Color.yellow.opacity(0.8))
+            Rectangle().fill(Brand.champagne).frame(width: 1.5, height: 7).offset(y: -36)
+            Rectangle().fill(Brand.champagne).frame(width: 1.5, height: 7).offset(y: 36)
+            Rectangle().fill(Brand.champagne).frame(width: 7, height: 1.5).offset(x: -36)
+            Rectangle().fill(Brand.champagne).frame(width: 7, height: 1.5).offset(x: 36)
+            Capsule().fill(Brand.champagne.opacity(0.8))
                 .frame(width: 1.5, height: 72)
                 .offset(x: 62)
             Image(systemName: "sun.max.fill")
                 .font(.system(size: 15))
-                .foregroundStyle(Color.yellow)
+                .foregroundStyle(Brand.champagne)
                 .shadow(color: .black.opacity(0.4), radius: 2)
                 .offset(x: 62, y: CGFloat(-bias) * 16)
         }

@@ -16,7 +16,7 @@ struct RetroCamApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .tint(.yellow)
+                .tint(Brand.champagne)
         }
     }
 }

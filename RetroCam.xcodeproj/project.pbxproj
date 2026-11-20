@@ -11,25 +11,7 @@
 		A10000000000000000000001 /* RetroCam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RetroCam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		909D6D5B30AC61EF00221F6B /* Exceptions for "RetroCamCapture" folder in "RetroCamCapture" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 909D6D5330AC61EF00221F6B /* RetroCamCapture */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		909D6D5530AC61EF00221F6B /* RetroCamCapture */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				909D6D5B30AC61EF00221F6B /* Exceptions for "RetroCamCapture" folder in "RetroCamCapture" target */,
-			);
-			path = RetroCamCapture;
-			sourceTree = "<group>";
-		};
 		A10000000000000000000002 /* RetroCam */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = RetroCam;
@@ -59,7 +41,6 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000002 /* RetroCam */,
-				909D6D5530AC61EF00221F6B /* RetroCamCapture */,
 				A10000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -87,9 +68,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				909D6D5530AC61EF00221F6B /* RetroCamCapture */,
 			);
 			name = RetroCamCapture;
 			packageProductDependencies = (

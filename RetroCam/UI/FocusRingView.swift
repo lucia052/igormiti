@@ -43,16 +43,16 @@ struct FocusRingView: View {
                 .rotationEffect(.radians(rotation))
 
                 // Indice fisso
-                Triangle().fill(Color.yellow)
+                Triangle().fill(Brand.champagne)
                     .frame(width: 18, height: 12)
                     .offset(y: -size / 2 - 8)
 
                 // Riquadro di messa a fuoco + valore
-                RoundedRectangle(cornerRadius: 8).stroke(Color.yellow, lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: 8).stroke(Brand.champagne, lineWidth: 1.5)
                     .frame(width: size * 0.25, height: size * 0.25)
                 Text(distanceText)
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(Brand.champagne)
                     .padding(.horizontal, 10).padding(.vertical, 5)
                     .glassCapsule()
                     .offset(y: size * 0.22)

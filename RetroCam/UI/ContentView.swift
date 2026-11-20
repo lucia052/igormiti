@@ -10,6 +10,8 @@ struct ContentView: View {
     @AppStorage("mirrorFront") private var mirrorFront = true
     @Environment(\.scenePhase) private var scenePhase
 
+    private enum TopMenu { case camera, timer }
+    @State private var openMenu: TopMenu?              // tendina aperta in alto (fotocamera o timer)
     @State private var showPicker = false
     @State private var timerIndex = 0
     @State private var countdown: Int?
@@ -18,10 +20,12 @@ struct ContentView: View {
     @State private var flashIsWhite = true
     @State private var tapPoint: CGPoint?
     @State private var tapToken = UUID()
+    @State private var toastToken = UUID()
     @State private var dragBaseBias: Float?
     @State private var pinchBase: CGFloat?
     @State private var thumbPop = false
     @State private var interfaceOrientation: UIInterfaceOrientation = .portrait
+    @State private var sideInsets = UIEdgeInsets.zero    // area sicura della finestra (taglio, isola, angoli)
     @State private var focusConfirmed = true           // fuoco automatico bloccato dopo l'ultimo tocco
     @State private var focusToken = UUID()
     @State private var focusSelection = false          // AF/MF mostrato: cambia subito, l'obiettivo si adegua dopo
@@ -29,6 +33,9 @@ struct ContentView: View {
 
     private let timerOptions = [0, 3, 5, 10]     // spento, 3, 5, 10 secondi
     private var isLandscape: Bool { interfaceOrientation.isLandscape }
+    /// Di quanto avvicinare al bordo destro i pulsanti in alto e in basso in orizzontale: lascia ~16 pt dal bordo fisico,
+    /// così non finiscono nella curva degli angoli dello schermo.
+    private var landscapeEdgeShift: CGFloat { max(0, sideInsets.right - 16) }
 
     var body: some View {
         ZStack {
@@ -63,9 +70,12 @@ struct ContentView: View {
         .onChange(of: camera.toast) { _, message in
             guard message != nil else { return }
             Haptics.shared.warning()
+            // Solo l'ultimo avviso può cancellarsi: prima un avviso vecchio faceva sparire subito quello nuovo
+            let token = UUID()
+            toastToken = token
             Task {
                 try? await Task.sleep(for: .seconds(3))
-                camera.toast = nil
+                if toastToken == token { camera.toast = nil }
             }
         }
         // Cambi dall'esterno (frontale, ghiera disattivata…): l'interfaccia segue lo stato reale
@@ -78,6 +88,8 @@ struct ContentView: View {
     // MARK: Orientamento
     private func trackOrientation() async {
         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        // Il task finisce quando la vista sparisce: si spegne l'accelerometro invece di lasciarlo acceso (batteria)
+        defer { UIDevice.current.endGeneratingDeviceOrientationNotifications() }
         refreshOrientation()
         // Passando da orizzontale sinistra a destra le dimensioni non cambiano: serve anche la notifica del dispositivo
         for await _ in NotificationCenter.default.notifications(named: UIDevice.orientationDidChangeNotification) {
@@ -91,6 +103,7 @@ struct ContentView: View {
         let o = scene?.interfaceOrientation ?? .portrait
         guard o != .unknown else { return }
         interfaceOrientation = o
+        sideInsets = scene?.keyWindow?.safeAreaInsets ?? .zero
         camera.setInterfaceOrientation(o)
     }
 
@@ -109,6 +122,7 @@ struct ContentView: View {
 
             if !isLandscape { bottomLayer.transition(.opacity) }
             zoomSliderLayer
+            topMenuLayer
 
             if let n = countdown {
                 Text("\(n)").font(.system(size: 120, weight: .thin, design: .rounded))
@@ -128,6 +142,95 @@ struct ContentView: View {
         .animation(.smooth(duration: 0.25), value: levelEnabled)
         .animation(.smooth(duration: 0.25), value: gridEnabled)
         .animation(.smooth(duration: 0.3), value: countdown)
+        .animation(.smooth(duration: 0.25), value: openMenu)
+    }
+
+    // MARK: Tendine in alto (fotocamera, timer)
+    private func toggleMenu(_ menu: TopMenu) {
+        Haptics.shared.selection()
+        openMenu = openMenu == menu ? nil : menu
+    }
+
+    /// Pannello a tendina nello stile del logo. Si chiude toccando fuori, scegliendo una voce o scattando.
+    @ViewBuilder private var topMenuLayer: some View {
+        if let menu = openMenu {
+            ZStack(alignment: .top) {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { openMenu = nil }
+                    .accessibilityHidden(true)
+                Group {
+                    switch menu {
+                    case .camera: cameraMenuPanel
+                    case .timer: timerMenuPanel
+                    }
+                }
+                .padding(.top, 56)
+                .transition(.scale(scale: 0.92, anchor: .top).combined(with: .opacity))
+            }
+            .transition(.opacity)
+        }
+    }
+
+    private var cameraMenuPanel: some View {
+        let currentID = camera.recipe.baseID ?? camera.recipe.id
+        return BrandMenuPanel {
+            ForEach(CameraRecipe.all) { r in
+                BrandMenuRow(title: Text(r.name), symbol: r.symbol,
+                             swatch: r.gradient, selected: r.id == currentID) {
+                    if r.id != currentID {
+                        Haptics.shared.selection()
+                        withAnimation(.smooth(duration: 0.3)) { camera.recipe = r }
+                    }
+                    openMenu = nil
+                }
+            }
+        }
+    }
+
+    /// Timer: quattro tasti in fila (spento, 3, 5, 10 secondi), un solo tocco per scegliere.
+    private var timerMenuPanel: some View {
+        HStack(spacing: 6) {
+            ForEach(timerOptions.indices, id: \.self) { i in
+                let seconds = timerOptions[i]
+                let selected = i == timerIndex
+                Button {
+                    if i != timerIndex { timerIndex = i; Haptics.shared.selection() }
+                    openMenu = nil
+                } label: {
+                    VStack(spacing: 3) {
+                        if seconds == 0 {
+                            Image(systemName: "timer.slash").font(.system(size: 18, weight: .semibold))
+                            Text("Spento").font(Brand.mono(11))
+                        } else {
+                            Text("\(seconds)").font(Brand.mono(22, weight: .bold))
+                            Text("sec").font(Brand.mono(11, weight: .regular))
+                        }
+                    }
+                    .foregroundStyle(selected ? Brand.ink : Color.white)
+                    .frame(width: 66, height: 62)
+                    .background {
+                        if selected {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Brand.metal)
+                        } else {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white.opacity(0.07))
+                        }
+                    }
+                    .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(seconds == 0 ? Text("Spento") : Text("\(seconds) secondi"))
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(8)
+        .background(Brand.ink.opacity(0.94), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(Brand.metal, lineWidth: 0.8).opacity(0.7)
+        }
+        .shadow(color: .black.opacity(0.55), radius: 26, y: 12)
     }
 
     // MARK: Mirino
@@ -175,16 +278,17 @@ struct ContentView: View {
 
     private func focusTap(at p: CGPoint, in size: CGSize) {
         guard !camera.manualFocus, let img = camera.preview.image else { return }
+        Haptics.shared.selection()      // risposta immediata al tocco: prima non c'era nulla finché il fuoco non si bloccava
         // Il riquadro scivola con una molla verso il nuovo punto (e si restringe, come nell'app Fotocamera)
         withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) { tapPoint = p }
         focusConfirmed = false     // la conferma (nessun suono né aptico) arriva quando il fuoco è davvero bloccato
 
-        // Punto dentro l'immagine mostrata: riempie lo schermo (ritaglia i bordi), la Polaroid quadrata sta intera
+        // Punto dentro l'immagine mostrata: riempie lo schermo (ritaglia i bordi), l'istantanea quadrata sta intera
         let iw = CGFloat(img.width), ih = CGFloat(img.height)
         let s = camera.recipe.cropSquare ? min(size.width / iw, size.height / ih) : max(size.width / iw, size.height / ih)
         var u = (p.x - (size.width - iw * s) / 2) / (iw * s)
         var v = (p.y - (size.height - ih * s) / 2) / (ih * s)
-        // Cornice istantanea (Polaroid): l'immagine mostrata include i bordi di carta; il tocco va riportato sulla sola foto.
+        // Cornice istantanea: l'immagine mostrata include i bordi di carta; il tocco va riportato sulla sola foto.
         // Foto quadrata di lato w, bordo b = 3,5% di w a sinistra, destra e sopra (l'immagine è larga w + 2b).
         if camera.recipe.frame == .instant {
             let w = iw / 1.07, b = 0.035 * w
@@ -250,7 +354,7 @@ struct ContentView: View {
         } label: {
             Image(systemName: camera.flashEnabled ? "bolt.fill" : "bolt.slash.fill")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(camera.flashEnabled && camera.recipe.flash != nil ? Color.yellow : Color.white)
+                .foregroundStyle(camera.flashEnabled && camera.recipe.flash != nil ? Brand.champagne : Color.white)
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
@@ -262,29 +366,16 @@ struct ContentView: View {
 
     /// Pulsante in alto: mostra la fotocamera attiva e, al tocco, apre l'elenco per sceglierne un'altra.
     private var nameCapsule: some View {
-        let currentID = camera.recipe.baseID ?? camera.recipe.id
-        return Menu {
-            ForEach(CameraRecipe.all) { r in
-                Button {
-                    guard r.id != currentID else { return }
-                    Haptics.shared.selection()
-                    withAnimation(.smooth(duration: 0.3)) { camera.recipe = r }
-                } label: {
-                    if r.id == currentID {
-                        Label(r.name, systemImage: "checkmark")
-                    } else {
-                        Label(r.name, systemImage: r.symbol)
-                    }
-                }
-            }
+        return Button {
+            toggleMenu(.camera)
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: camera.recipe.symbol)
-                Text(camera.recipe.name).fontWeight(.semibold)
-                Text(camera.recipe.aspectLabel).foregroundStyle(.secondary)
+                Text(camera.recipe.name).font(Brand.mono(14))
+                Text(camera.recipe.aspectLabel).font(Brand.mono(12, weight: .regular)).foregroundStyle(.secondary)
                 Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(openMenu == .camera ? 180 : 0))
             }
-            .font(.subheadline)
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
         }
@@ -295,19 +386,8 @@ struct ContentView: View {
 
     /// Timer: un tocco apre il menu per scegliere spento, 3, 5 o 10 secondi.
     private var timerButton: some View {
-        Menu {
-            ForEach(timerOptions.indices, id: \.self) { i in
-                Button {
-                    guard i != timerIndex else { return }
-                    timerIndex = i
-                    Haptics.shared.selection()
-                } label: {
-                    let seconds = timerOptions[i]
-                    let title: Text = seconds == 0 ? Text("Spento") : Text("\(seconds) secondi")
-                    if i == timerIndex { Label { title } icon: { Image(systemName: "checkmark") } }
-                    else { title }
-                }
-            }
+        Button {
+            toggleMenu(.timer)
         } label: {
             ZStack {
                 if timerOptions[timerIndex] == 0 {
@@ -315,7 +395,7 @@ struct ContentView: View {
                 } else {
                     Text("\(timerOptions[timerIndex])s")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.yellow)
+                        .foregroundStyle(Brand.champagne)
                 }
             }
             .font(.system(size: 18, weight: .semibold))
@@ -334,7 +414,7 @@ struct ContentView: View {
         } label: {
             Image(systemName: "level")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(levelEnabled ? Color.yellow : Color.white)
+                .foregroundStyle(levelEnabled ? Brand.champagne : Color.white)
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
@@ -349,7 +429,7 @@ struct ContentView: View {
         } label: {
             Image(systemName: "squareshape.split.3x3")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(gridEnabled ? Color.yellow : Color.white)
+                .foregroundStyle(gridEnabled ? Brand.champagne : Color.white)
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
@@ -366,7 +446,7 @@ struct ContentView: View {
             } label: {
                 Image(systemName: camera.livePhotoEnabled ? "livephoto" : "livephoto.slash")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(camera.livePhotoEnabled ? Color.yellow : Color.white)
+                    .foregroundStyle(camera.livePhotoEnabled ? Brand.champagne : Color.white)
                     .frame(width: 44, height: 44)
                 .contentShape(Circle())
             }
@@ -411,7 +491,7 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color.black.opacity(0.45))
                         .frame(width: 56, height: 56)
-                    ProgressView().tint(.white)
+                    ApertureSpinner(size: 28)
                 }
             }
             .scaleEffect(thumbPop ? 1.15 : 1)
@@ -522,9 +602,7 @@ struct ContentView: View {
     private var bottomLayer: some View {
         VStack(spacing: 18) {
             Spacer()
-            Text(camera.hudText)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.85))
+            HUDLabel(model: camera.hud)
             zoomPill
             // Riga sopra l'otturatore: comandi (sinistra), AF/MF (centro), cambio frontale/posteriore (destra)
             ZStack {
@@ -568,9 +646,11 @@ struct ContentView: View {
                 Spacer()
                 GlassGroup(spacing: 16) {
                     VStack(spacing: 16) {
-                        filtersButton
+                        // Impostazioni e galleria stanno in alto e in basso, lontane dal Dynamic Island (al centro del bordo):
+                        // si spostano verso il bordo dello schermo, oltre l'area sicura. L'otturatore resta dov'è.
+                        filtersButton.offset(x: landscapeEdgeShift)
                         shutterButton
-                        galleryButton
+                        galleryButton.offset(x: landscapeEdgeShift)
                     }
                 }
             }
@@ -637,12 +717,12 @@ struct ContentView: View {
                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: .bold))
+                .font(Brand.mono(13, weight: .bold))
                 .frame(width: 54, height: 36)
                 .foregroundStyle(selected ? Color.black : Color.white.opacity(0.8))
                 .background {
                     // Un solo indicatore giallo che scivola da un segmento all'altro
-                    if selected { Capsule().fill(Color.yellow).matchedGeometryEffect(id: "focusHighlight", in: focusNamespace) }
+                    if selected { Capsule().fill(Brand.metal).matchedGeometryEffect(id: "focusHighlight", in: focusNamespace) }
                 }
                 .contentShape(Capsule())     // senza questo, con lo stile "plain", risponde solo dove c'è il testo
         }
@@ -665,9 +745,9 @@ struct ContentView: View {
                             Haptics.shared.selection(); camera.setZoom(stop)
                         } label: {
                             Text(CameraManager.lensLabel(stop))
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(Brand.mono(13))
                                 .frame(width: 46, height: 40)
-                                .foregroundStyle(on ? Color.yellow : Color.white.opacity(0.85))
+                                .foregroundStyle(on ? Brand.champagne : Color.white.opacity(0.85))
                                 .background(on ? Color.white.opacity(0.2) : Color.clear, in: Capsule())
                                 .contentShape(Capsule())
                         }
@@ -694,6 +774,7 @@ struct ContentView: View {
 
     // MARK: Scatto
     private func shoot() {
+        openMenu = nil
         // Secondo tocco durante il conto alla rovescia: annulla
         if timerTask != nil {
             timerTask?.cancel(); timerTask = nil; countdown = nil
@@ -757,8 +838,12 @@ private struct ShutterLabel: View {
 
     var body: some View {
         ZStack {
-            Circle().stroke(Color.white.opacity(0.9), lineWidth: 3).padding(2)
-            Circle().fill(armed ? Color.yellow : Color.white).padding(9)
+            Circle().strokeBorder(Brand.metal, lineWidth: 3).padding(2)
+            // Il diaframma si chiude quando il timer è armato
+            ApertureShape(openness: armed ? 0.15 : 0.55)
+                .fill(Brand.metal)
+                .padding(10)
+                .animation(.spring(duration: 0.3), value: armed)
         }
         .frame(width: 84, height: 84)
         // Il cerchio e il pallino interno lasciano un anello vuoto in mezzo: senza questo, toccare lì non scatta
@@ -841,10 +926,10 @@ private struct ZoomDialView: View {
 
                 // Indice fisso
                 HStack {
-                    ZoomIndex().fill(Color.yellow).frame(width: 12, height: 18).offset(x: -9)
+                    ZoomIndex().fill(Brand.champagne).frame(width: 12, height: 18).offset(x: -9)
                     Spacer()
                 }
-                Rectangle().fill(Color.yellow).frame(width: width * 0.5, height: 1.5)
+                Rectangle().fill(Brand.champagne).frame(width: width * 0.5, height: 1.5)
             }
             .frame(width: width, height: height)
             // Area di tocco più larga della ghiera (14 pt per lato): non serve centrarla col dito
@@ -859,7 +944,7 @@ private struct ZoomDialView: View {
 
             Text(CameraManager.lensLabel((zoom * 10).rounded() / 10))
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(.yellow)
+                .foregroundStyle(Brand.champagne)
                 .padding(.horizontal, 10).padding(.vertical, 5)
                 .glassCapsule()
                 .onTapGesture(perform: onReset)

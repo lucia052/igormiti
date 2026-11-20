@@ -47,7 +47,7 @@ struct LevelIndicator: View {
                 .rotationEffect(.degrees(-motion.angle))
             Capsule().frame(width: 26, height: 2)
         }
-        .foregroundStyle(isLevel ? Color.yellow : Color.white.opacity(0.8))
+        .foregroundStyle(isLevel ? Brand.champagne : Color.white.opacity(0.8))
         .shadow(color: .black.opacity(0.4), radius: 2)
         .opacity(motion.isFlat ? 0 : 1)
         .animation(.easeOut(duration: 0.15), value: isLevel)

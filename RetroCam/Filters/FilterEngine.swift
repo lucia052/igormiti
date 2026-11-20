@@ -51,7 +51,8 @@ final class FilterEngine: @unchecked Sendable {
             both { $0.cropped(to: rect) }
         }
         // 2. Risoluzione di lavoro (CCD / VGA / preview veloce)
-        let maxW: CGFloat = quality == .preview ? 960 : 4032
+        // Mirino adattato alla potenza del telefono e alle condizioni del momento (vedi DeviceProfile)
+        let maxW: CGFloat = quality == .preview ? DeviceProfile.previewWidth : 4032
         let work = min(r.targetWidth ?? maxW, maxW)
         if img.extent.width > work {
             let k = work / img.extent.width
@@ -518,11 +519,26 @@ final class FilterEngine: @unchecked Sendable {
 
     // MARK: - LUT 3D procedurale
 
+    /// Prepara in anticipo le LUT delle fotocamere (da una coda in background): il primo cambio di look non blocca il mirino.
+    func prewarm(_ recipes: [CameraRecipe]) {
+        for r in recipes { _ = cubeData(for: r) }
+    }
+
     private func cubeData(for r: CameraRecipe) -> Data {
-        lock.lock(); defer { lock.unlock() }
-        if let d = cubes[r.id] { return d }
+        lock.lock()
+        if let d = cubes[r.id] { lock.unlock(); return d }
+        lock.unlock()
+        // Il calcolo (32³ colori) avviene fuori dal lock: mirino e scatto non si bloccano a vicenda
+        let d = buildCube(for: r)
+        lock.lock()
         // I look personalizzati hanno un id nuovo a ogni generazione: limita la cache (~0,5 MB a LUT)
         if cubes.count >= 8 { cubes.removeAll() }
+        cubes[r.id] = d
+        lock.unlock()
+        return d
+    }
+
+    private func buildCube(for r: CameraRecipe) -> Data {
         let n = cubeSize
         var data = [Float](repeating: 0, count: n * n * n * 4)
         var i = 0
@@ -532,9 +548,7 @@ final class FilterEngine: @unchecked Sendable {
             data[i] = o.x; data[i + 1] = o.y; data[i + 2] = o.z; data[i + 3] = 1
             i += 4
         } } }
-        let d = data.withUnsafeBufferPointer { Data(buffer: $0) }
-        cubes[r.id] = d
-        return d
+        return data.withUnsafeBufferPointer { Data(buffer: $0) }
     }
 
     private func roll(_ x: Float, _ knee: Float) -> Float {
