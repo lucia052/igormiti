@@ -9,8 +9,17 @@ enum Brand {
     /// Nero caldo del fondo del logo.
     static let ink = Color(red: 0.043, green: 0.031, blue: 0.027)
 
-    /// Sfumatura metallica delle lamelle.
-    static let metal = LinearGradient(colors: [champagne, bronze], startPoint: .topLeading, endPoint: .bottomTrailing)
+    /// Riflesso del metallo spazzolato: il punto più chiaro delle lamelle.
+    static let highlight = Color(red: 0.99, green: 0.93, blue: 0.82)
+
+    /// Sfumatura metallica delle lamelle: luce, champagne, ombra bronzo (più contrasto di un semplice due colori).
+    static let metal = LinearGradient(
+        stops: [.init(color: highlight, location: 0), .init(color: champagne, location: 0.35),
+                .init(color: bronze, location: 1)],
+        startPoint: .topLeading, endPoint: .bottomTrailing)
+
+    /// Nome dell'app, inciso come su una targhetta di fotocamera.
+    static let name = "LUMORA"
 
     /// Carattere per i dati tecnici (ƒ/, tempi, zoom): monospaziato, come il resto del mirino.
     static func mono(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
@@ -46,6 +55,73 @@ struct ApertureShape: Shape {
             path.closeSubpath()
         }
         return path
+    }
+}
+
+extension View {
+    /// Pulsante rotondo in vetro con bordo metallico champagne. Se `active`, il vetro si tinge di champagne:
+    /// il colore di marca compare solo dove significa "acceso".
+    func brandCircle(active: Bool = false) -> some View {
+        brandGlass(in: Circle(), active: active)
+    }
+
+    func brandGlass<S: InsettableShape>(in shape: S, active: Bool = false, interactive: Bool = true) -> some View {
+        modifier(BrandGlass(shape: shape, active: active, interactive: interactive))
+    }
+}
+
+private struct BrandGlass<S: InsettableShape>: ViewModifier {
+    var shape: S
+    var active: Bool
+    var interactive: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .glassBackground(in: shape, tint: active ? Brand.champagne.opacity(0.28) : nil, interactive: interactive)
+            .overlay {
+                shape.strokeBorder(Brand.metal, lineWidth: active ? 1.2 : 0.7)
+                    .opacity(active ? 0.95 : 0.5)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
+/// Marchio: diaframma e nome inciso, per i momenti in cui l'app si presenta (avvio, permessi).
+struct BrandMark: View {
+    var apertureSize: CGFloat = 96
+    var openness: CGFloat = 0.55
+
+    var body: some View {
+        VStack(spacing: 18) {
+            ApertureShape(openness: openness)
+                .fill(Brand.metal)
+                .frame(width: apertureSize, height: apertureSize)
+                .shadow(color: Brand.champagne.opacity(0.35), radius: 22)
+            Text(Brand.name)
+                .font(Brand.mono(15, weight: .bold))
+                .tracking(7)
+                .foregroundStyle(Brand.metal)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "Lumora"))
+    }
+}
+
+/// Avvio: su nero caldo il diaframma si apre sul nome e poi svanisce nel mirino. Con "Riduci movimento" resta fermo.
+struct BrandLaunchOverlay: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var open = false
+
+    var body: some View {
+        ZStack {
+            Brand.ink.ignoresSafeArea()
+            BrandMark(apertureSize: 120, openness: open ? 0.9 : 0.15)
+                .scaleEffect(open || reduceMotion ? 1 : 0.92)
+        }
+        .onAppear {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.9)) { open = true }
+        }
+        .accessibilityHidden(true)
     }
 }
 

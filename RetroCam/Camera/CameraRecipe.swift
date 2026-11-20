@@ -14,6 +14,28 @@ struct FlashParams: Equatable {
 }
 
 enum StampOverlay: Equatable { case none, digicamDate, instantDate, camcorder }
+
+/// Formato della foto. I nomi seguono l'uso comune (lato lungo : lato corto); l'immagine segue l'orientamento
+/// del telefono: in verticale 9:16 è alta e stretta, in orizzontale larga.
+enum FrameAspect: String, CaseIterable, Identifiable, Equatable {
+    case classic = "4:3"        // il sensore intero: nessun ritaglio
+    case portrait = "4:5"       // il formato verticale dei post di Instagram
+    case story = "9:16"         // storie, Reels, TikTok
+    case square = "1:1"
+
+    var id: String { rawValue }
+    var label: String { rawValue }
+
+    /// Lato corto diviso lato lungo.
+    var shortOverLong: CGFloat {
+        switch self {
+        case .classic: return 3.0 / 4.0
+        case .portrait: return 4.0 / 5.0
+        case .story: return 9.0 / 16.0
+        case .square: return 1
+        }
+    }
+}
 enum FrameStyle: Equatable { case none, instant }
 
 /// Una "ricetta" descrive una fotocamera. Aggiungerne una = aggiungere dati, non codice.
@@ -66,14 +88,16 @@ struct CameraRecipe: Identifiable, Equatable {
     var flash: FlashParams? = nil
     var overlay: StampOverlay = .none
     var frame: FrameStyle = .none
-    var cropSquare = false
+    var cropSquare = false              // look nato quadrato (istantanea): il formato non si può cambiare
+    /// Formato con cui si filtra: lo imposta CameraManager secondo la scelta dell'utente (1:1 fisso se `cropSquare`).
+    var aspect: FrameAspect = .classic
 
     /// Look generato dal modello linguistico a partire da una fotocamera di base.
     var isCustom = false
     var baseID: String? = nil           // fotocamera da cui deriva il look personalizzato
 
     /// Rapporto mostrato nell'interfaccia.
-    var aspectLabel: String { cropSquare ? "1:1" : "4:3" }
+    var aspectLabel: String { cropSquare ? FrameAspect.square.label : aspect.label }
 
     init(id: String, name: String, subtitle: String, symbol: String, gradient: [Color]) {
         self.id = id; self.name = name; self.subtitle = subtitle

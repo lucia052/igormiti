@@ -11,6 +11,17 @@ extension View {
             self.background(.ultraThinMaterial, in: shape)
         }
     }
+    /// Come `glass(in:)`, con un velo di colore opzionale (usato per i comandi attivi del marchio).
+    @ViewBuilder
+    func glassBackground<S: Shape>(in shape: S, tint: Color?, interactive: Bool = true) -> some View {
+        if #available(iOS 26.0, *) {
+            let base: Glass = tint.map { Glass.regular.tint($0) } ?? .regular
+            self.glassEffect(interactive ? base.interactive() : base, in: shape)
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+                .background(tint ?? .clear, in: shape)
+        }
+    }
     func glassCapsule(interactive: Bool = false) -> some View { glass(in: Capsule(), interactive: interactive) }
     /// Pulsante nativo: vetro di sistema su iOS 26+, altrimenti pulsante "bordered" di sistema.
     @ViewBuilder

@@ -23,7 +23,21 @@ enum DeviceProfile {
         return info.isLowPowerModeEnabled ? min(basePreviewWidth, 720) : basePreviewWidth
     }
 
-    /// Scatti che possono essere in elaborazione insieme: ogni foto filtrata occupa centinaia di MB temporaneamente,
-    /// e troppi scatti in coda fanno chiudere l'app per mancanza di memoria.
-    static let maxPendingCaptures: Int = gigabytes >= 7.5 ? 5 : (gigabytes >= 5.5 ? 4 : 3)
+    /// Risoluzione delle foto se l'utente non ha scelto: 24 MP sui telefoni con molta memoria, altrimenti 12 MP.
+    static let defaultMegapixels: Int = gigabytes >= 7.5 ? 24 : 12
+
+    /// Risoluzione chiesta dall'utente (impostazioni dell'app), o quella predefinita. La fotocamera usa la più grande
+    /// che il suo sensore offre senza superarla.
+    static var photoMegapixels: Int {
+        let chosen = UserDefaults.standard.integer(forKey: "photoMegapixels")
+        return chosen > 0 ? chosen : defaultMegapixels
+    }
+
+    /// Scatti che possono essere in elaborazione insieme: ogni foto filtrata occupa centinaia di MB temporaneamente
+    /// (molti di più a 24 e 48 MP), e troppi scatti in coda fanno chiudere l'app per mancanza di memoria.
+    static var maxPendingCaptures: Int {
+        let base = gigabytes >= 7.5 ? 5 : (gigabytes >= 5.5 ? 4 : 3)
+        let penalty = photoMegapixels >= 48 ? 3 : (photoMegapixels >= 24 ? 1 : 0)
+        return max(2, base - penalty)
+    }
 }

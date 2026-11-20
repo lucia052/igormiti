@@ -37,7 +37,9 @@ struct FocusRingView: View {
                         var p = Path()
                         p.move(to: CGPoint(x: c.x + cos(a) * R * 0.93, y: c.y + sin(a) * R * 0.93))
                         p.addLine(to: CGPoint(x: c.x + cos(a) * R * (long ? 0.80 : 0.86), y: c.y + sin(a) * R * (long ? 0.80 : 0.86)))
-                        ctx.stroke(p, with: .color(.white.opacity(long ? 0.9 : 0.55)), lineWidth: long ? 2 : 1.2)
+                        // Tacche lunghe in luce metallica, corte in champagne più spento
+                        ctx.stroke(p, with: .color(long ? Brand.highlight.opacity(0.95) : Brand.champagne.opacity(0.6)),
+                                   lineWidth: long ? 2 : 1.2)
                     }
                 }
                 .rotationEffect(.radians(rotation))

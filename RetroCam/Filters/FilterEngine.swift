@@ -4,7 +4,8 @@ import UIKit
 import ImageIO
 import simd
 
-enum RenderQuality { case preview, photo }
+/// preview: mirino. video: fotogrammi registrati (720p). photo: foto finale a piena risoluzione.
+enum RenderQuality { case preview, video, photo }
 
 /// Pipeline Core Image a strati. L'ordine segue la fisica della fotocamera:
 /// risoluzione → ottica (morbidezza, aberrazione) → processore (nitidezza) → flash → colore (LUT)
@@ -15,6 +16,8 @@ final class FilterEngine: @unchecked Sendable {
     /// Spazio colore di lavoro e di uscita: Display P3 (quello delle foto dell'iPhone). Con sRGB i colori più saturi
     /// venivano tagliati subito all'ingresso della LUT, e le foto uscivano più piatte di quelle originali.
     private let srgb = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpace(name: CGColorSpace.sRGB)!
+    /// Spazio colore di uscita (per chi scrive i fotogrammi fuori dal motore, come il registratore video).
+    var outputColorSpace: CGColorSpace { srgb }
     private let lock = NSLock()
     private var cubes: [String: Data] = [:]
     private var stamps: [String: CIImage] = [:]
@@ -44,15 +47,33 @@ final class FilterEngine: @unchecked Sendable {
         }
         func both(_ f: (CIImage) -> CIImage) { img = f(img); matte = matte.map(f) }
 
-        // 1. Crop quadrato (istantanea)
-        if r.cropSquare {
-            let e = img.extent, side = min(e.width, e.height)
-            let rect = CGRect(x: e.midX - side / 2, y: e.midY - side / 2, width: side, height: side)
-            both { $0.cropped(to: rect) }
+        // 1. Formato (istantanea quadrata, 4:5, 9:16…): ritaglio centrale, che segue l'orientamento dell'immagine
+        let aspect: FrameAspect = r.cropSquare ? .square : r.aspect
+        do {
+            let e = img.extent
+            let longSide = max(e.width, e.height), shortSide = min(e.width, e.height)
+            var newShort = shortSide, newLong = shortSide / aspect.shortOverLong
+            if newLong > longSide { newLong = longSide; newShort = longSide * aspect.shortOverLong }
+            let size = e.height >= e.width ? CGSize(width: newShort, height: newLong)
+                                           : CGSize(width: newLong, height: newShort)
+            if abs(size.width - e.width) > 1 || abs(size.height - e.height) > 1 {
+                let rect = CGRect(x: e.midX - size.width / 2, y: e.midY - size.height / 2,
+                                  width: size.width, height: size.height).integral
+                both { $0.cropped(to: rect) }
+            }
         }
         // 2. Risoluzione di lavoro (CCD / VGA / preview veloce)
         // Mirino adattato alla potenza del telefono e alle condizioni del momento (vedi DeviceProfile)
-        let maxW: CGFloat = quality == .preview ? DeviceProfile.previewWidth : 4032
+        // La foto resta alla risoluzione scattata (12, 24 o 48 MP): la riducono solo i look "d'epoca" con targetWidth
+        // Il video registra con il lato corto scelto nelle impostazioni (720p o 1080p), qualunque sia l'orientamento
+        let maxW: CGFloat
+        switch quality {
+        case .preview: maxW = DeviceProfile.previewWidth
+        case .video:
+            let short = VideoSettings.shortSide
+            maxW = img.extent.width <= img.extent.height ? short : short * img.extent.width / max(img.extent.height, 1)
+        case .photo: maxW = .greatestFiniteMagnitude
+        }
         let work = min(r.targetWidth ?? maxW, maxW)
         if img.extent.width > work {
             let k = work / img.extent.width
@@ -125,7 +146,8 @@ final class FilterEngine: @unchecked Sendable {
         if r.dust > 0 { img = dust(img, amount: r.dust, ext: ext, s: s, variation: variation) }
 
         // 12. Overlay (date stamp / mirino camcorder)
-        img = overlay(img, kind: r.overlay, time: time, ext: ext)
+        // In 9:16 le storie coprono le fasce in alto e in basso con i loro comandi: data e mirino REC stanno più dentro
+        img = overlay(img, kind: r.overlay, time: time, ext: ext, safeY: aspect == .story ? ext.height * 0.12 : 0)
 
         // 13. Cornice istantanea
         if r.frame == .instant { img = instantFrame(img, ext: ext) }
@@ -390,31 +412,31 @@ final class FilterEngine: @unchecked Sendable {
 
     // MARK: - Overlay & cornice
 
-    private func overlay(_ img: CIImage, kind: StampOverlay, time: Double, ext: CGRect) -> CIImage {
+    private func overlay(_ img: CIImage, kind: StampOverlay, time: Double, ext: CGRect, safeY: CGFloat = 0) -> CIImage {
         switch kind {
         case .none:
             return img
         case .digicamDate:
             let text = "’" + yearFmt.string(from: Date())
             let st = stamp(text, color: UIColor(red: 1, green: 0.55, blue: 0.12, alpha: 1), size: ext.width * 0.05, glow: .orange)
-            return place(st, in: ext, right: true, top: false, margin: ext.width * 0.03, over: img)
+            return place(st, in: ext, right: true, top: false, margin: ext.width * 0.03, over: img, extraY: safeY)
         case .instantDate:
             // Data arancione impressa nella foto, in basso a sinistra (la cornice viene aggiunta dopo)
             let text = "’" + yearFmt.string(from: Date())
             let st = stamp(text, color: UIColor(red: 1, green: 0.55, blue: 0.12, alpha: 1), size: ext.width * 0.045, glow: .orange)
-            return place(st, in: ext, right: false, top: false, margin: ext.width * 0.03, over: img)
+            return place(st, in: ext, right: false, top: false, margin: ext.width * 0.03, over: img, extraY: safeY)
         case .camcorder:
             let size = ext.width * 0.045
             let blink = Int(time * 1.5) % 2 == 0
             var out = brackets(img, ext: ext)
             out = place(stamp(blink ? "● REC" : "  REC", color: .red, size: size, glow: nil),
-                        in: ext, right: false, top: true, margin: ext.width * 0.03, over: out)
+                        in: ext, right: false, top: true, margin: ext.width * 0.03, over: out, extraY: safeY)
             out = place(stamp("SP ■■■", color: .white, size: size * 0.8, glow: nil),
-                        in: ext, right: true, top: true, margin: ext.width * 0.03, over: out)
+                        in: ext, right: true, top: true, margin: ext.width * 0.03, over: out, extraY: safeY)
             out = place(stamp(dayFmt.string(from: Date()).uppercased(), color: .white, size: size * 0.85, glow: nil),
-                        in: ext, right: false, top: false, margin: ext.width * 0.03, over: out)
+                        in: ext, right: false, top: false, margin: ext.width * 0.03, over: out, extraY: safeY)
             out = place(stamp(timeFmt.string(from: Date()), color: .white, size: size * 0.85, glow: nil),
-                        in: ext, right: true, top: false, margin: ext.width * 0.03, over: out)
+                        in: ext, right: true, top: false, margin: ext.width * 0.03, over: out, extraY: safeY)
             return out
         }
     }
@@ -467,9 +489,10 @@ final class FilterEngine: @unchecked Sendable {
         return ci
     }
 
-    private func place(_ st: CIImage, in ext: CGRect, right: Bool, top: Bool, margin: CGFloat, over img: CIImage) -> CIImage {
+    private func place(_ st: CIImage, in ext: CGRect, right: Bool, top: Bool, margin: CGFloat, over img: CIImage,
+                       extraY: CGFloat = 0) -> CIImage {
         let x = right ? ext.maxX - st.extent.width - margin * 0.3 : ext.minX + margin * 0.3
-        let y = top ? ext.maxY - st.extent.height - margin * 1.2 : ext.minY + margin * 0.5
+        let y = top ? ext.maxY - st.extent.height - margin * 1.2 - extraY : ext.minY + margin * 0.5 + extraY
         return st.transformed(by: CGAffineTransform(translationX: x, y: y)).composited(over: img)
     }
 

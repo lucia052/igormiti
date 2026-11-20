@@ -13,6 +13,7 @@ struct ContentView: View {
     private enum TopMenu { case camera, timer }
     @State private var openMenu: TopMenu?              // tendina aperta in alto (fotocamera o timer)
     @State private var showPicker = false
+    @State private var showLaunch = true
     @State private var timerIndex = 0
     @State private var countdown: Int?
     @State private var timerTask: Task<Void, Never>?
@@ -47,6 +48,15 @@ struct ContentView: View {
             } else {
                 cameraUI.environment(\.colorScheme, .dark)
             }
+            // Momento di marca: il diaframma si apre sul nome, poi svanisce nel mirino
+            if showLaunch {
+                BrandLaunchOverlay().transition(.opacity).zIndex(1)
+            }
+        }
+        .animation(.easeInOut(duration: 0.45), value: showLaunch)
+        .task {
+            try? await Task.sleep(for: .milliseconds(1100))
+            showLaunch = false
         }
         .animation(.smooth(duration: 0.35), value: focusSelection)
         .animation(.smooth(duration: 0.3), value: camera.toast)
@@ -62,6 +72,7 @@ struct ContentView: View {
         .modifier(CameraButtonCapture(isEnabled: camera.authorization == .authorized && !showPicker,
                                       action: shoot))
         .onChange(of: scenePhase) { _, phase in
+            if phase != .active, camera.isRecording { camera.stopRecording() }
             if phase == .active { camera.start() } else if phase == .background { camera.stop() }
         }
         .onChange(of: camera.saveCounter) { _, _ in
@@ -113,6 +124,7 @@ struct ContentView: View {
             if gridEnabled {
                 GridOverlay().ignoresSafeArea().allowsHitTesting(false)
             }
+            ViewfinderFrame()
             // Livella (bilanciamento): indica se la foto è dritta; si attiva dal suo pulsante, indipendente dalla griglia
             if levelEnabled { LevelIndicator(orientation: interfaceOrientation) }
             // Ruotando il telefono i due layout si sciolgono l'uno nell'altro invece di scattare
@@ -125,8 +137,8 @@ struct ContentView: View {
             topMenuLayer
 
             if let n = countdown {
-                Text("\(n)").font(.system(size: 120, weight: .thin, design: .rounded))
-                    .foregroundStyle(.white).shadow(radius: 10)
+                Text("\(n)").font(Brand.mono(120, weight: .ultraLight))
+                    .foregroundStyle(Brand.metal).shadow(color: .black.opacity(0.5), radius: 10)
                     .allowsHitTesting(false)
             }
             Color(white: flashIsWhite ? 1 : 0)
@@ -135,7 +147,7 @@ struct ContentView: View {
         }
         // Animazioni morbide e coerenti (curva "smooth" di sistema) per i cambi di schermata
         .animation(.smooth(duration: 0.35), value: isLandscape)
-        .animation(.smooth(duration: 0.3), value: camera.recipe.cropSquare)
+        .animation(.smooth(duration: 0.3), value: camera.effectiveAspect)
         .animation(.smooth(duration: 0.3), value: camera.recipe.id)
         .animation(.smooth(duration: 0.3), value: camera.livePhotoSupported)
         .animation(.smooth(duration: 0.3), value: camera.isFront)
@@ -143,6 +155,8 @@ struct ContentView: View {
         .animation(.smooth(duration: 0.25), value: gridEnabled)
         .animation(.smooth(duration: 0.3), value: countdown)
         .animation(.smooth(duration: 0.25), value: openMenu)
+        .animation(.smooth(duration: 0.25), value: camera.isRecording)
+        .animation(.smooth(duration: 0.25), value: camera.captureMode)
     }
 
     // MARK: Tendine in alto (fotocamera, timer)
@@ -186,7 +200,49 @@ struct ContentView: View {
                     openMenu = nil
                 }
             }
+            aspectPicker
         }
+    }
+
+    /// Formato della foto, in fondo alla tendina delle fotocamere: la tendina resta aperta per scegliere anche il look.
+    /// L'istantanea è sempre quadrata: i tasti si spengono e resta acceso 1:1.
+    private var aspectPicker: some View {
+        let locked = camera.recipe.cropSquare
+        return VStack(spacing: 8) {
+            Rectangle().fill(Brand.metal).frame(height: 0.6).opacity(0.5).padding(.horizontal, 6)
+            HStack(spacing: 6) {
+                ForEach(FrameAspect.allCases) { a in
+                    let selected = camera.effectiveAspect == a
+                    Button {
+                        guard !locked, a != camera.aspect else { return }
+                        Haptics.shared.selection()
+                        withAnimation(.smooth(duration: 0.3)) { camera.aspect = a }
+                    } label: {
+                        Text(a.label)
+                            .font(Brand.mono(13, weight: .bold))
+                            .foregroundStyle(selected ? Brand.ink : Color.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 38)
+                            .background {
+                                if selected {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Brand.metal)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white.opacity(0.07))
+                                }
+                            }
+                            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(locked && !selected)
+                    .opacity(locked && !selected ? 0.35 : 1)
+                    .accessibilityLabel(Text("Formato \(a.label)"))
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.bottom, 2)
+        }
+        .padding(.top, 4)
     }
 
     /// Timer: quattro tasti in fila (spento, 3, 5, 10 secondi), un solo tocco per scegliere.
@@ -239,7 +295,7 @@ struct ContentView: View {
             ZStack {
                 ViewfinderLayer(preview: camera.preview,
                                 pixelated: camera.recipe.pixelated,
-                                square: camera.recipe.cropSquare)
+                                fitsWhole: camera.effectiveAspect != .classic)
                     // Durante il cambio AF ↔ MF il mirino si ferma un attimo: lo si vela con una sfocatura che si dissolve,
                     // come nel cambio di obiettivo dell'app Fotocamera, invece di mostrare un fotogramma congelato
                     .blur(radius: camera.isSwitchingLens ? 16 : 0)
@@ -285,7 +341,8 @@ struct ContentView: View {
 
         // Punto dentro l'immagine mostrata: riempie lo schermo (ritaglia i bordi), l'istantanea quadrata sta intera
         let iw = CGFloat(img.width), ih = CGFloat(img.height)
-        let s = camera.recipe.cropSquare ? min(size.width / iw, size.height / ih) : max(size.width / iw, size.height / ih)
+        // 4:3 riempie lo schermo (ritaglia i bordi); gli altri formati si vedono interi, come escono nella foto
+        let s = camera.effectiveAspect != .classic ? min(size.width / iw, size.height / ih) : max(size.width / iw, size.height / ih)
         var u = (p.x - (size.width - iw * s) / 2) / (iw * s)
         var v = (p.y - (size.height - ih * s) / 2) / (ih * s)
         // Cornice istantanea: l'immagine mostrata include i bordi di carta; il tocco va riportato sulla sola foto.
@@ -360,7 +417,7 @@ struct ContentView: View {
         }
         .disabled(camera.recipe.flash == nil)
         .opacity(camera.recipe.flash == nil ? 0.4 : 1)
-        .glassCircle()
+        .brandCircle(active: camera.flashEnabled && camera.recipe.flash != nil)
         .accessibilityLabel("Flash")
     }
 
@@ -372,14 +429,17 @@ struct ContentView: View {
             HStack(spacing: 6) {
                 Image(systemName: camera.recipe.symbol)
                 Text(camera.recipe.name).font(Brand.mono(14))
-                Text(camera.recipe.aspectLabel).font(Brand.mono(12, weight: .regular)).foregroundStyle(.secondary)
+                Text(camera.effectiveAspect.label).font(Brand.mono(12, weight: .regular)).foregroundStyle(.secondary)
                 Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
                     .rotationEffect(.degrees(openMenu == .camera ? 180 : 0))
             }
             .foregroundStyle(.white)
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 40)
+            .contentShape(Capsule())
         }
-        .nativeGlassButton()
+        .buttonStyle(.plain)
+        .brandGlass(in: Capsule())
         .accessibilityLabel("Scegli fotocamera")
         .accessibilityValue(camera.recipe.name)
     }
@@ -402,7 +462,7 @@ struct ContentView: View {
             .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
-        .glassCircle()
+        .brandCircle(active: timerOptions[timerIndex] != 0)
         .accessibilityLabel("Timer")
         .accessibilityValue(timerOptions[timerIndex] == 0 ? "Spento" : "\(timerOptions[timerIndex]) secondi")
     }
@@ -418,7 +478,7 @@ struct ContentView: View {
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
-        .glassCircle()
+        .brandCircle(active: levelEnabled)
         .accessibilityLabel("Allineamento orizzontale")
         .accessibilityValue(levelEnabled ? "Attiva" : "Spenta")
     }
@@ -433,14 +493,14 @@ struct ContentView: View {
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
-        .glassCircle()
+        .brandCircle(active: gridEnabled)
         .accessibilityLabel("Griglia")
         .accessibilityValue(gridEnabled ? "Attiva" : "Spenta")
     }
 
     /// Live Photo: visibile solo se l'obiettivo attivo la supporta.
     @ViewBuilder private var liveButton: some View {
-        if camera.livePhotoSupported {
+        if camera.livePhotoSupported && camera.captureMode == .photo {
             Button {
                 camera.livePhotoEnabled.toggle(); Haptics.shared.selection(); SoundFX.shared.toggle(camera.livePhotoEnabled)
             } label: {
@@ -450,7 +510,7 @@ struct ContentView: View {
                     .frame(width: 44, height: 44)
                 .contentShape(Circle())
             }
-            .glassCircle()
+            .brandCircle(active: camera.livePhotoEnabled)
             .accessibilityLabel("Live Photo")
             .accessibilityValue(camera.livePhotoEnabled ? "Attiva" : "Spenta")
         }
@@ -467,7 +527,9 @@ struct ContentView: View {
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
-        .glassCircle()
+        .brandCircle()
+        .disabled(camera.isRecording)
+        .opacity(camera.isRecording ? 0.4 : 1)
         .accessibilityLabel("Cambia fotocamera")
     }
 
@@ -497,14 +559,18 @@ struct ContentView: View {
             .scaleEffect(thumbPop ? 1.15 : 1)
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        .glass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .brandGlass(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityLabel("Galleria")
     }
 
     private var shutterButton: some View {
-        Button(action: shoot) { ShutterLabel(armed: timerTask != nil) }
-            .buttonStyle(ShutterStyle())
-            .accessibilityLabel(timerTask != nil ? "Annulla timer" : "Scatta")
+        Button(action: shoot) {
+            ShutterLabel(armed: timerTask != nil, video: camera.captureMode == .video, recording: camera.isRecording)
+        }
+        .buttonStyle(ShutterStyle())
+        .accessibilityLabel(timerTask != nil ? "Annulla timer"
+                            : camera.isRecording ? "Ferma registrazione"
+                            : camera.captureMode == .video ? "Registra" : "Scatta")
     }
 
     private var filtersButton: some View {
@@ -522,7 +588,9 @@ struct ContentView: View {
             .frame(width: 56, height: 56)
             .contentShape(Circle())
         }
-        .glassCircle()
+        .brandCircle()
+        .disabled(camera.isRecording)           // le impostazioni del video non cambiano a metà registrazione
+        .opacity(camera.isRecording ? 0.4 : 1)
         .accessibilityLabel("Impostazioni")
     }
 
@@ -533,7 +601,7 @@ struct ContentView: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16).padding(.vertical, 10)
-                .glass(in: RoundedRectangle(cornerRadius: 18, style: .continuous), interactive: false)
+                .brandGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous), interactive: false)
                 .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
@@ -553,6 +621,7 @@ struct ContentView: View {
                 }
                 .foregroundStyle(.white)
             }
+            recordingBadge
             toastView
             Spacer()
         }
@@ -604,6 +673,7 @@ struct ContentView: View {
             Spacer()
             HUDLabel(model: camera.hud)
             zoomPill
+            exposureStrip
             // Riga sopra l'otturatore: comandi (sinistra), AF/MF (centro), cambio frontale/posteriore (destra)
             ZStack {
                 focusModeToggle
@@ -615,8 +685,9 @@ struct ContentView: View {
                 .padding(.horizontal, 28)
             }
             bottomBar
+            modeSwitch
         }
-        .padding(.bottom, 36)
+        .padding(.bottom, 14)
     }
 
     private var bottomBar: some View {
@@ -659,9 +730,12 @@ struct ContentView: View {
 
             VStack(spacing: 8) {
                 nameCapsule.foregroundStyle(.white)
+                recordingBadge
                 toastView
                 Spacer()
                 zoomPill
+                exposureStrip
+                modeSwitch
             }
             .padding(.vertical, 8)
 
@@ -679,7 +753,7 @@ struct ContentView: View {
                 focusSegment("MF", selected: focusSelection, enabled: canFocusManually) { setFocus(manual: true) }
             }
             .padding(3)
-            .glassCapsule()
+            .brandGlass(in: Capsule(), interactive: false)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Messa a fuoco")
@@ -758,9 +832,69 @@ struct ContentView: View {
                     }
                 }
                 .padding(4)
-                .glassCapsule()
+                .brandGlass(in: Capsule(), interactive: false)
             }
             .transition(.scale(scale: 0.9).combined(with: .opacity))
+        }
+    }
+
+    // MARK: Foto / Video
+    /// Selettore della modalità sotto l'otturatore. Bloccato durante la registrazione.
+    private var modeSwitch: some View {
+        HStack(spacing: 22) {
+            modeButton("FOTO", mode: .photo)
+            modeButton("VIDEO", mode: .video)
+        }
+        .disabled(camera.isRecording)
+        .opacity(camera.isRecording ? 0.4 : 1)
+    }
+
+    private func modeButton(_ title: LocalizedStringKey, mode: CameraManager.CaptureMode) -> some View {
+        let selected = camera.captureMode == mode
+        return Button {
+            guard !selected else { return }
+            Haptics.shared.selection()
+            withAnimation(.smooth(duration: 0.25)) { camera.setCaptureMode(mode) }
+        } label: {
+            Text(title)
+                .font(Brand.mono(13, weight: .bold))
+                .tracking(1.5)
+                .foregroundStyle(selected ? Brand.champagne : Color.white.opacity(0.6))
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// Durata della registrazione in corso, in alto: pallino rosso e minuti:secondi.
+    @ViewBuilder private var recordingBadge: some View {
+        if let start = camera.recordingStart {
+            TimelineView(.periodic(from: start, by: 1)) { context in
+                let seconds = max(0, Int(context.date.timeIntervalSince(start)))
+                HStack(spacing: 6) {
+                    Circle().fill(Color(red: 0.92, green: 0.22, blue: 0.18)).frame(width: 8, height: 8)
+                    Text(String(format: "%02d:%02d", seconds / 60, seconds % 60))
+                        .font(Brand.mono(14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .brandGlass(in: Capsule(), interactive: false)
+            }
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .accessibilityLabel("Registrazione in corso")
+        }
+    }
+
+    // MARK: Luminosità (modalità manuale)
+    /// In manuale il tocco sul mirino non regola l'esposizione: la luminosità si imposta da questa barra.
+    @ViewBuilder private var exposureStrip: some View {
+        if focusSelection {
+            ExposureStrip(bias: camera.exposureBias,
+                          onChange: { camera.setExposureBias($0) },
+                          onReset: { Haptics.shared.selection(); camera.setExposureBias(0) })
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
     }
 
@@ -775,6 +909,12 @@ struct ContentView: View {
     // MARK: Scatto
     private func shoot() {
         openMenu = nil
+        // In registrazione l'otturatore (o il Camera Control) ferma subito il video
+        if camera.isRecording {
+            camera.stopRecording()
+            Haptics.shared.shutterPress(); SoundFX.shared.toggle(false)
+            return
+        }
         // Secondo tocco durante il conto alla rovescia: annulla
         if timerTask != nil {
             timerTask?.cancel(); timerTask = nil; countdown = nil
@@ -796,6 +936,11 @@ struct ContentView: View {
     }
 
     private func fire() {
+        if camera.captureMode == .video {
+            Haptics.shared.shutterClick(); SoundFX.shared.toggle(true)
+            camera.startRecording()
+            return
+        }
         Haptics.shared.shutterClick(); SoundFX.shared.shutter()
         let white = camera.flashEnabled && camera.recipe.flash != nil
         flashIsWhite = white
@@ -835,16 +980,31 @@ private struct CameraButtonCapture: ViewModifier {
 
 private struct ShutterLabel: View {
     var armed = false
+    var video = false
+    var recording = false
 
     var body: some View {
         ZStack {
-            Circle().strokeBorder(Brand.metal, lineWidth: 3).padding(2)
-            // Il diaframma si chiude quando il timer è armato
-            ApertureShape(openness: armed ? 0.15 : 0.55)
-                .fill(Brand.metal)
-                .padding(10)
-                .animation(.spring(duration: 0.3), value: armed)
+            // Doppio anello metallico, come la ghiera di un obiettivo: anello esterno sottile, anello interno spesso
+            Circle().strokeBorder(Brand.metal, lineWidth: 4).padding(2)
+            Circle().strokeBorder(Brand.champagne.opacity(0.35), lineWidth: 1).padding(9)
+            if video {
+                // Video: pallino rosso che, in registrazione, diventa un quadrato (come l'app Fotocamera)
+                RoundedRectangle(cornerRadius: recording ? 8 : 31, style: .continuous)
+                    .fill(Color(red: 0.92, green: 0.22, blue: 0.18))
+                    .frame(width: recording ? 34 : 62, height: recording ? 34 : 62)
+                    .opacity(armed ? 0.6 : 1)
+            } else {
+                // Il diaframma si chiude quando il timer è armato
+                ApertureShape(openness: armed ? 0.15 : 0.55)
+                    .fill(Brand.metal)
+                    .padding(13)
+                    .shadow(color: Brand.champagne.opacity(armed ? 0 : 0.3), radius: 8)
+            }
         }
+        .animation(.spring(duration: 0.3), value: armed)
+        .animation(.spring(duration: 0.3), value: recording)
+        .animation(.smooth(duration: 0.25), value: video)
         .frame(width: 84, height: 84)
         // Il cerchio e il pallino interno lasciano un anello vuoto in mezzo: senza questo, toccare lì non scatta
         .contentShape(Circle())
@@ -915,7 +1075,8 @@ private struct ZoomDialView: View {
                         var p = Path()
                         p.move(to: CGPoint(x: sz.width * (long ? 0.28 : 0.36), y: y))
                         p.addLine(to: CGPoint(x: sz.width * 0.72 + (long ? sz.width * 0.0 : -sz.width * 0.08), y: y))
-                        ctx.stroke(p, with: .color(.white.opacity(long ? 0.9 : 0.55)), lineWidth: long ? 2 : 1.2)
+                        ctx.stroke(p, with: .color(long ? Brand.highlight.opacity(0.95) : Brand.champagne.opacity(0.6)),
+                                   lineWidth: long ? 2 : 1.2)
                     }
                 }
                 .mask(

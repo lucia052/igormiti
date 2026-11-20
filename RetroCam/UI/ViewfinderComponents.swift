@@ -6,7 +6,7 @@ import SwiftUI
 struct ViewfinderLayer: View {
     @ObservedObject var preview: PreviewModel
     var pixelated: Bool
-    var square: Bool
+    var fitsWhole: Bool          // true: l'immagine si vede intera (formati diversi dal 4:3); false: riempie lo schermo
 
     var body: some View {
         ZStack {
@@ -14,7 +14,7 @@ struct ViewfinderLayer: View {
                 LinearGradient(colors: [Color(red: 0.9, green: 0.65, blue: 0.44), Color(red: 0.08, green: 0.07, blue: 0.1)],
                                startPoint: .top, endPoint: .bottom)
             }
-            FrameLayerView(preview: preview, pixelated: pixelated, square: square)
+            FrameLayerView(preview: preview, pixelated: pixelated, fitsWhole: fitsWhole)
         }
     }
 }
@@ -23,7 +23,7 @@ struct ViewfinderLayer: View {
 private struct FrameLayerView: UIViewRepresentable {
     let preview: PreviewModel
     var pixelated: Bool
-    var square: Bool
+    var fitsWhole: Bool          // true: l'immagine si vede intera (formati diversi dal 4:3); false: riempie lo schermo
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
@@ -38,8 +38,8 @@ private struct FrameLayerView: UIViewRepresentable {
     func updateUIView(_ view: UIView, context: Context) {
         let layer = view.layer
         preview.layer = layer
-        // Come prima: la foto intera tiene il rapporto (istantanea quadrata), le altre riempiono lo schermo ritagliando i bordi
-        layer.contentsGravity = square ? .resizeAspect : .resizeAspectFill
+        // 4:3 riempie lo schermo ritagliando i bordi; gli altri formati (4:5, 9:16, 1:1) si vedono interi, come nella foto
+        layer.contentsGravity = fitsWhole ? .resizeAspect : .resizeAspectFill
         layer.magnificationFilter = pixelated ? .nearest : .linear
         layer.minificationFilter = .linear
     }
@@ -111,10 +111,8 @@ struct GridOverlay: View {
 struct CameraAccessView: View {
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "camera.fill")
-                .font(.system(size: 44, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 4)
+            BrandMark(apertureSize: 84, openness: 0.3)
+                .padding(.bottom, 8)
             Text("Serve l'accesso alla fotocamera")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.primary)

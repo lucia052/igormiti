@@ -417,6 +417,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Lumora usa la fotocamera per mostrare il mirino con i filtri retrò in tempo reale e scattare foto.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Lumora usa il microfono per registrare l'audio dei video retrò.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Lumora salva le tue foto nella libreria Foto.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -452,6 +453,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Lumora usa la fotocamera per mostrare il mirino con i filtri retrò in tempo reale e scattare foto.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Lumora usa il microfono per registrare l'audio dei video retrò.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Lumora salva le tue foto nella libreria Foto.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

@@ -4,6 +4,9 @@
     "%lld" : {
 
     },
+    "%lld MP" : {
+
+    },
     "%lld secondi" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -37,6 +40,18 @@
 
     },
     "∞" : {
+
+    },
+    "24 fps" : {
+
+    },
+    "30 fps" : {
+
+    },
+    "720p" : {
+
+    },
+    "1080p" : {
 
     },
     "AF" : {
@@ -390,6 +405,9 @@
         }
       }
     },
+    "Ferma registrazione" : {
+
+    },
     "Flash" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -419,6 +437,15 @@
         }
       }
     },
+    "Formato %@" : {
+
+    },
+    "Foto" : {
+
+    },
+    "FOTO" : {
+
+    },
     "Fotocamera non disponibile." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -447,6 +474,9 @@
           }
         }
       }
+    },
+    "Fotogrammi" : {
+
     },
     "Galleria" : {
       "extractionState" : "manual",
@@ -709,6 +739,9 @@
         }
       }
     },
+    "Luminosità" : {
+
+    },
     "Lumora usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -827,6 +860,21 @@
           }
         }
       }
+    },
+    "Registra" : {
+
+    },
+    "Registra l'audio" : {
+
+    },
+    "Registrazione in corso" : {
+
+    },
+    "Registrazione non riuscita." : {
+
+    },
+    "Risoluzione" : {
+
     },
     "Salva anche l'originale" : {
       "extractionState" : "manual",
@@ -1003,6 +1051,9 @@
       }
     },
     "sec" : {
+
+    },
+    "Senza il microfono i video saranno muti. Puoi attivarlo nelle Impostazioni." : {
 
     },
     "Serve l'accesso alla fotocamera" : {
@@ -1210,6 +1261,12 @@
           }
         }
       }
+    },
+    "Video" : {
+
+    },
+    "VIDEO" : {
+
     },
     "Zoom" : {
       "extractionState" : "manual",

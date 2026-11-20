@@ -44,6 +44,12 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     @Published var saveCounter = 0
     @Published var recipe: CameraRecipe = CameraRecipe.all[0] { didSet { syncRenderState() } }
     @Published var flashEnabled = true { didSet { syncRenderState() } }
+    /// Formato scelto (4:3, 4:5, 9:16, 1:1): vale per tutte le fotocamere tranne l'istantanea, che è sempre quadrata.
+    @Published var aspect: FrameAspect = FrameAspect(rawValue: UserDefaults.standard.string(forKey: "frameAspect") ?? "") ?? .classic {
+        didSet { UserDefaults.standard.set(aspect.rawValue, forKey: "frameAspect"); syncRenderState() }
+    }
+    /// Formato effettivo della fotocamera attiva.
+    var effectiveAspect: FrameAspect { recipe.cropSquare ? .square : aspect }
     @Published var livePhotoEnabled = UserDefaults.standard.bool(forKey: "livePhotoEnabled") {
         didSet { UserDefaults.standard.set(livePhotoEnabled, forKey: "livePhotoEnabled"); syncRenderState() }
     }
@@ -58,6 +64,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     @Published var zoomFloor: CGFloat = 1
     @Published var zoomCeiling: CGFloat = 25       // zoom massimo mostrato: quello del modello di iPhone, con tetto a 25×
     static let maxDisplayZoom: CGFloat = 25         // zoom massimo dell'app (come l'app Fotocamera sui modelli più recenti)           // zoom minimo raggiungibile ora (cambia con l'obiettivo usato in manuale)
+    @Published var supportedMegapixels: [Int] = [12]  // risoluzioni foto della fotocamera posteriore (es. 12, 24, 48)
     @Published var lensStops: [CGFloat] = [1]       // zoom mostrato di ogni obiettivo fisico (es. 0.5, 1, 3)
     @Published var zoomStops: [CGFloat] = [1, 2, 4] // scatti rapidi: obiettivi fisici + tappe digitali
     @Published var exposureBias: Float = 0          // -2...+2 EV
@@ -65,6 +72,12 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     @Published var isFront = false
     @Published var pendingCount = 0                 // scatti in elaborazione
     @Published var toast: String?
+
+    /// Foto o video retrò. In video l'otturatore avvia e ferma la registrazione.
+    enum CaptureMode: String { case photo, video }
+    @Published private(set) var captureMode: CaptureMode = .photo
+    @Published private(set) var isRecording = false
+    @Published private(set) var recordingStart: Date?
 
     var isProcessing: Bool { pendingCount > 0 }
 
@@ -117,6 +130,14 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     private var realFlashAvailable = false      // il dispositivo attivo ha un flash fisico (LED o schermo)
     private var frameCount = 0
     // Ultimo frame pronto e relativo testo: sul main se ne consegna uno solo alla volta, così i frame non si accumulano
+    // Video: comando di avvio/stop (stateLock), registratore (solo videoQueue), microfono (solo sessionQueue)
+    private enum RecordCommand { case start, stop }
+    private var recordCommand: RecordCommand?
+    private var recorder: MovieRecorder?
+    private let audioOutput = AVCaptureAudioDataOutput()
+    private var audioInput: AVCaptureDeviceInput?
+    private var audioReady = false                                // stateLock
+    private var videoModeActive = false                           // stateLock: letto dalla sessionQueue
     private var zoomRequest: (display: CGFloat, ramp: Bool)?      // ultima richiesta di zoom non ancora applicata
     private var biasRequest: Float?                               // ultima compensazione dell'esposizione non ancora applicata
     private var pendingFrame: CGImage?
@@ -157,7 +178,9 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     deinit { NotificationCenter.default.removeObserver(self) }
 
     private func syncRenderState() {
-        stateLock.lock(); renderRecipe = recipe; renderFlash = flashEnabled; renderLive = livePhotoEnabled; stateLock.unlock()
+        var rec = recipe
+        rec.aspect = effectiveAspect
+        stateLock.lock(); renderRecipe = rec; renderFlash = flashEnabled; renderLive = livePhotoEnabled; stateLock.unlock()
     }
     /// Lo scatto Live è ancora in attesa (voce presente)? Funzione sincrona: NSLock non si usa da contesti asincroni.
     private func isLiveCapturePending(_ id: Int64) -> Bool {
@@ -175,6 +198,8 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
 
     /// Da chiamare sulla sessionQueue dopo ogni cambio di input.
     private func updateRealFlash() {
+        if let d = device { observeInfinity(of: d) }        // dopo ogni cambio di obiettivo: si impara l'infinito del nuovo
+        applyVideoFrameRate()                               // e il nuovo obiettivo gira ai fotogrammi del video, se serve
         let ok = photoOutput.supportedFlashModes.contains(.on)
         stateLock.lock(); realFlashAvailable = ok; stateLock.unlock()
         // Live Photo: va abilitata sull'output (se supportata dall'obiettivo attivo)
@@ -182,6 +207,43 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
         if photoOutput.isLivePhotoCaptureEnabled != live { photoOutput.isLivePhotoCaptureEnabled = live }
         DispatchQueue.main.async { self.livePhotoSupported = live }
     }
+    /// L'obiettivo ha un sensore da 24 MP o più: il suo ritaglio 2× resta nitido (qualità ottica).
+    private static func hasHighResolutionSensor(_ lens: AVCaptureDevice) -> Bool {
+        lens.formats.contains { format in format.supportedMaxPhotoDimensions.contains { megapixels($0) >= 24 } }
+    }
+
+    private static func megapixels(_ d: CMVideoDimensions) -> Int {
+        Int((Double(d.width) * Double(d.height) / 1_000_000).rounded(.down))     // 4032×3024 → 12, 8064×6048 → 48
+    }
+
+    /// Risoluzione massima delle foto per il dispositivo attivo: la più grande che il sensore offre senza superare
+    /// quella scelta. Da chiamare sulla sessionQueue, tra beginConfiguration e commitConfiguration (dopo ogni cambio
+    /// di input): cambiarla a sessione avviata ricostruisce la pipeline e ferma il mirino.
+    private func applyPhotoResolution() {
+        guard let d = device else { return }
+        let dims = d.activeFormat.supportedMaxPhotoDimensions.sorted { Self.megapixels($0) < Self.megapixels($1) }
+        guard let smallest = dims.first else { return }
+        let wanted = DeviceProfile.photoMegapixels
+        let chosen = dims.last { Self.megapixels($0) <= wanted } ?? smallest
+        let current = photoOutput.maxPhotoDimensions
+        if current.width != chosen.width || current.height != chosen.height { photoOutput.maxPhotoDimensions = chosen }
+        // Le opzioni da mostrare vengono dalla posteriore (la frontale ha quasi sempre solo 12 MP)
+        if d.position == .back {
+            let options = Array(Set(dims.map(Self.megapixels))).sorted()
+            DispatchQueue.main.async { self.supportedMegapixels = options }
+        }
+    }
+
+    /// Da chiamare quando cambia l'impostazione della risoluzione.
+    func refreshPhotoResolution() {
+        sessionQueue.async { [self] in
+            guard configured else { return }
+            session.beginConfiguration()
+            applyPhotoResolution()
+            session.commitConfiguration()
+        }
+    }
+
     private func hasRealFlash() -> Bool {
         stateLock.lock(); defer { stateLock.unlock() }
         return realFlashAvailable
@@ -332,10 +394,19 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
             dev.videoZoomFactor = min(max(mainFactor, dev.minAvailableVideoZoomFactor), dev.maxAvailableVideoZoomFactor)
             dev.unlockForConfiguration()
         }
-        // Scatti rapidi: obiettivi fisici più 2× e 4× digitali se non coincidono con un obiettivo vero
+        // Scatti rapidi, come nell'app Fotocamera: gli obiettivi veri, più il ritaglio 2× degli obiettivi con sensore
+        // ad alta risoluzione (48 MP), che ha qualità ottica. Niente tappe solo digitali (il vecchio 4× fisso):
+        // sull'iPhone 17 diventa 0,5 · 1 · 2, sui Pro con tele da 48 MP 0,5 · 1 · 2 · 4 · 8, sui sensori da 12 MP
+        // restano solo gli obiettivi. Per gli altri ingrandimenti c'è il pizzico.
         let ceiling = max(1, min(dev.maxAvailableVideoZoomFactor * mult, Self.maxDisplayZoom))       // massimo di questo modello, nel valore mostrato, tetto 25×
+        let lenses = dev.isVirtualDevice ? dev.constituentDevices : [dev]
         var quick = stops
-        for digital in [CGFloat(2), 4] where digital <= ceiling && !stops.contains(where: { abs($0 - digital) < 0.3 }) { quick.append(digital) }
+        if lenses.count == stops.count {
+            for (stop, lens) in zip(stops, lenses) where Self.hasHighResolutionSensor(lens) {
+                let crop = ((stop * 2) * 10).rounded() / 10
+                if crop <= ceiling, !quick.contains(where: { abs($0 - crop) < 0.3 }) { quick.append(crop) }
+            }
+        }
         quick.sort()
         DispatchQueue.main.async {
             self.lensStops = stops; self.zoomStops = quick; self.zoom = 1
@@ -365,6 +436,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
             // Senza questo il massimo è .speed: niente Deep Fusion / riduzione del rumore nelle foto
             photoOutput.maxPhotoQualityPrioritization = .balanced
             configureConnections(front: false)
+            applyPhotoResolution()
             session.commitConfiguration()
             configured = true
             updateRealFlash()
@@ -460,6 +532,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
             } else {
                 session.addInput(oldInput)
             }
+            applyPhotoResolution()          // ogni fotocamera ha le sue risoluzioni
             session.commitConfiguration()
             // Dopo il commit: le connessioni del nuovo input esistono e accettano la rotazione verticale
             configureConnections(front: (device?.position ?? .back) == .front)
@@ -503,6 +576,12 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
                 settings.livePhotoMovieFileURL = FileManager.default.temporaryDirectory
                     .appendingPathComponent("\(UUID().uuidString).mov")
                 updateLive(settings.uniqueID, register: true) { $0.awaitingMovie = true; $0.recipe = rec }      // registra lo scatto come Live Photo in attesa
+            }
+            // Alta risoluzione (24/48 MP) solo per le foto normali: con il filmato della Live Photo si resta al formato
+            // standard, che è quello predefinito di ogni scatto
+            let maxDims = photoOutput.maxPhotoDimensions
+            if settings.livePhotoMovieFileURL == nil, maxDims.width > 0, maxDims.height > 0 {
+                settings.maxPhotoDimensions = maxDims
             }
             // Foto orientata come il telefono: in orizzontale esce orizzontale
             if let d = device, let connection = photoOutput.connection(with: .video) {
@@ -553,6 +632,7 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
         } else {
             session.addInput(old)
         }
+        applyPhotoResolution()
         session.commitConfiguration()
         configureConnections(front: newDevice.position == .front)
         updateRealFlash()
@@ -561,10 +641,53 @@ final class CameraManager: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     /// Sull'iPhone la posizione 1.0 della lente va oltre l'infinito reale e l'orizzonte risulta sfocato.
-    /// La ghiera (0...1) viene quindi mappata su 0...infinityLensPosition. Calibra questo valore sul dispositivo.
-    private let infinityLensPosition: Float = 0.85
+    /// La ghiera (0...1) viene quindi mappata su 0...(posizione dell'infinito di quell'obiettivo).
+    /// Quella posizione cambia da modello a modello e da obiettivo a obiettivo: il valore di partenza è una stima,
+    /// poi l'app lo impara dall'autofocus del dispositivo (vedi `learnInfinity`) e lo ricorda per ogni obiettivo.
+    private let infinityDefault: Float = 0.85
+    private var infinityObservation: NSKeyValueObservation?        // solo da sessionQueue
+    private var _infinityLearned: [String: Float] = [:]            // protetto da stateLock
+
+    private func infinityKey(_ d: AVCaptureDevice) -> String { "infinityLens.\(d.uniqueID)" }
+
+    /// Posizione dell'infinito dell'obiettivo attivo: quella appresa, o la stima di partenza.
+    private func infinityPosition() -> Float {
+        guard let d = device else { return infinityDefault }
+        let key = infinityKey(d)
+        stateLock.lock()
+        if let known = _infinityLearned[key] { stateLock.unlock(); return known }
+        stateLock.unlock()
+        let stored = UserDefaults.standard.float(forKey: key)       // 0 se non c'è
+        let value = stored > infinityDefault ? min(stored, 1) : infinityDefault
+        stateLock.lock(); _infinityLearned[key] = value; stateLock.unlock()
+        return value
+    }
+
     private func deviceLensPosition(_ ring: Float) -> Float {
-        min(1, max(0, ring)) * infinityLensPosition
+        min(1, max(0, ring)) * infinityPosition()
+    }
+
+    /// Da chiamare sulla sessionQueue dopo ogni cambio di obiettivo: segue i momenti in cui l'autofocus si ferma.
+    private func observeInfinity(of d: AVCaptureDevice) {
+        infinityObservation = d.observe(\.isAdjustingFocus, options: [.new]) { [weak self] dev, change in
+            if change.newValue == false { self?.learnInfinity(dev) }
+        }
+    }
+
+    /// Quando l'autofocus si ferma più lontano di quanto la ghiera arrivava, l'infinito di quell'obiettivo è oltre:
+    /// si alza il limite (e si ricorda), così il giro completo della ghiera arriva davvero all'infinito.
+    /// Non si abbassa mai da solo: un autofocus fermo vicino non dice nulla sull'infinito.
+    private func learnInfinity(_ d: AVCaptureDevice) {
+        guard d.focusMode != .locked else { return }               // in manuale la posizione l'abbiamo scelta noi
+        let position = d.lensPosition
+        guard position > 0, position <= 1 else { return }
+        let key = infinityKey(d)
+        stateLock.lock()
+        let known = _infinityLearned[key] ?? max(UserDefaults.standard.float(forKey: key), infinityDefault)
+        guard position > known + 0.005 else { stateLock.unlock(); return }
+        _infinityLearned[key] = position
+        stateLock.unlock()
+        UserDefaults.standard.set(position, forKey: key)
     }
 
     /// Cursore "Messa a fuoco" del Camera Control (gira sulla sessionQueue, disponibile in manuale):
@@ -870,6 +993,8 @@ extension CameraManager: AVCaptureSessionControlsDelegate {
 // MARK: - Frame video → anteprima filtrata
 extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // L'audio arriva sulla stessa coda dei fotogrammi: va solo nel filmato in registrazione
+        if output === audioOutput { recorder?.appendAudio(sampleBuffer); return }
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let (rec, requestedFlash, mask) = snapshot()
         // Con un flash fisico la luce vera si accende solo allo scatto: l'anteprima non simula effetti finti
@@ -916,8 +1041,15 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         }
         if rec.flash != nil && flash { scheduleMask(pb, orientation: orientation) }
 
+        // Registrazione: si filtra una volta sola in 720p, e lo stesso fotogramma va nel filmato e nel mirino
+        let command = takeRecordCommand()
+        if command == .stop { finishRecording() }
+        let recording = command == .start || recorder != nil
         let out = engine.render(source, mask: personMatte, recipe: rec, flashOn: flash,
-                                time: CACurrentMediaTime(), quality: .preview)
+                                time: CACurrentMediaTime(), quality: recording ? .video : .preview)
+        if command == .start, recorder == nil { beginRecording(size: out.extent.size) }
+        recorder?.appendVideo(out, at: CMSampleBufferGetPresentationTimeStamp(sampleBuffer),
+                              context: engine.context, colorSpace: engine.outputColorSpace)
         guard let cg = engine.context.createCGImage(out, from: out.extent) else { return }
 
         frameCount += 1
@@ -941,6 +1073,178 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             stateLock.unlock()
             if let frame { preview.image = frame }
             if let text, text != self.hud.text { self.hud.text = text }
+        }
+    }
+}
+
+// L'audio del microfono usa lo stesso metodo dei fotogrammi (vedi sopra)
+extension CameraManager: AVCaptureAudioDataOutputSampleBufferDelegate {}
+
+// MARK: - Video retrò
+extension CameraManager {
+    /// Passa da foto a video (o viceversa). Il microfono si collega solo in video: in foto non compare l'indicatore
+    /// arancione del microfono e le Live Photo restano come prima.
+    func setCaptureMode(_ mode: CaptureMode) {
+        guard !isRecording, mode != captureMode else { return }
+        captureMode = mode
+        stateLock.lock(); videoModeActive = mode == .video; stateLock.unlock()
+        refreshVideoSettings()
+    }
+
+    /// Applica le impostazioni del video (fotogrammi al secondo, audio). Da chiamare quando cambiano;
+    /// non durante una registrazione, che resta con le impostazioni con cui è partita.
+    func refreshVideoSettings() {
+        guard !isRecording else { return }
+        sessionQueue.async { [self] in applyVideoFrameRate() }
+        guard captureMode == .video, VideoSettings.recordsAudio else {
+            sessionQueue.async { [self] in detachAudio() }
+            return
+        }
+        AVCaptureDevice.requestAccess(for: .audio) { [self] granted in
+            if granted {
+                sessionQueue.async { [self] in attachAudio() }
+            } else {
+                DispatchQueue.main.async {
+                    self.toast = String(localized: "Senza il microfono i video saranno muti. Puoi attivarlo nelle Impostazioni.")
+                }
+            }
+        }
+    }
+
+    func startRecording() {
+        guard captureMode == .video, !isRecording, authorization == .authorized else { return }
+        stateLock.lock(); recordCommand = .start; stateLock.unlock()
+        isRecording = true
+        recordingStart = Date()
+    }
+
+    func stopRecording() {
+        guard isRecording else { return }
+        stateLock.lock(); recordCommand = .stop; stateLock.unlock()
+        isRecording = false
+        recordingStart = nil
+        pendingCount += 1                               // la miniatura mostra l'elaborazione finché il video non è salvato
+        // Se la sessione si ferma (app in secondo piano) non arrivano altri fotogrammi: il filmato si chiude comunque
+        videoQueue.async { [self] in finishRecordingIfRequested() }
+    }
+
+    private func takeRecordCommand() -> RecordCommand? {
+        stateLock.lock(); defer { stateLock.unlock() }
+        let command = recordCommand
+        recordCommand = nil
+        return command
+    }
+
+    /// Solo videoQueue. Chiude il filmato se è stato chiesto lo stop (senza consumare un eventuale avvio).
+    private func finishRecordingIfRequested() {
+        stateLock.lock()
+        let stop = recordCommand == .stop
+        if stop { recordCommand = nil }
+        stateLock.unlock()
+        if stop { finishRecording() }
+    }
+
+    /// Solo videoQueue. La dimensione del filmato è quella del primo fotogramma filtrato (lati pari).
+    private func beginRecording(size: CGSize) {
+        let w = max(2, Int(size.width.rounded()) / 2 * 2), h = max(2, Int(size.height.rounded()) / 2 * 2)
+        stateLock.lock(); let audio = audioReady; stateLock.unlock()
+        recorder = MovieRecorder(size: CGSize(width: w, height: h), audio: audio)
+        if recorder == nil {
+            DispatchQueue.main.async {
+                self.isRecording = false
+                self.recordingStart = nil
+                self.toast = String(localized: "Registrazione non riuscita.")
+            }
+        }
+    }
+
+    /// Solo videoQueue.
+    private func finishRecording() {
+        guard let r = recorder else { finishOne(); return }
+        recorder = nil
+        r.finish { [weak self] url in
+            guard let self else { return }
+            guard let url else { self.finishOne(toast: String(localized: "Registrazione non riuscita.")); return }
+            self.saveVideo(url)
+        }
+    }
+
+    /// Solo sessionQueue. In video la fotocamera gira ai fotogrammi scelti (24 o 30 al secondo); in foto torna
+    /// al comportamento predefinito, che allunga l'esposizione al buio.
+    private func applyVideoFrameRate() {
+        guard let d = device else { return }
+        stateLock.lock(); let video = videoModeActive; stateLock.unlock()
+        do {
+            try d.lockForConfiguration()
+            defer { d.unlockForConfiguration() }
+            if video {
+                let fps = Double(VideoSettings.frameRate)
+                guard d.activeFormat.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= fps && fps <= $0.maxFrameRate })
+                else { return }
+                let duration = CMTime(value: 1, timescale: CMTimeScale(VideoSettings.frameRate))
+                d.activeVideoMinFrameDuration = duration
+                d.activeVideoMaxFrameDuration = duration
+            } else {
+                d.activeVideoMinFrameDuration = .invalid       // .invalid = valori predefiniti del formato
+                d.activeVideoMaxFrameDuration = .invalid
+            }
+        } catch { }
+    }
+
+    /// Solo sessionQueue.
+    private func attachAudio() {
+        guard audioInput == nil, let mic = AVCaptureDevice.default(for: .audio),
+              let input = try? AVCaptureDeviceInput(device: mic) else { return }
+        session.beginConfiguration()
+        if session.canAddInput(input) { session.addInput(input); audioInput = input }
+        if !session.outputs.contains(audioOutput), session.canAddOutput(audioOutput) {
+            audioOutput.setSampleBufferDelegate(self, queue: videoQueue)
+            session.addOutput(audioOutput)
+        }
+        session.commitConfiguration()
+        stateLock.lock(); audioReady = audioInput != nil; stateLock.unlock()
+    }
+
+    /// Solo sessionQueue.
+    private func detachAudio() {
+        stateLock.lock(); audioReady = false; stateLock.unlock()
+        guard let input = audioInput else { return }
+        session.beginConfiguration()
+        session.removeInput(input)
+        if session.outputs.contains(audioOutput) { session.removeOutput(audioOutput) }
+        session.commitConfiguration()
+        audioInput = nil
+    }
+
+    private func saveVideo(_ url: URL) {
+        Task { [self] in
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: 320, height: 320)
+            let thumb = (try? await generator.image(at: .zero).image).map { UIImage(cgImage: $0) }
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { [self] status in
+                guard status == .authorized || status == .limited else {
+                    try? FileManager.default.removeItem(at: url)
+                    finishOne(toast: String(localized: "Consenti l'accesso alle Foto in Impostazioni per salvare gli scatti."))
+                    return
+                }
+                PHPhotoLibrary.shared().performChanges({
+                    let options = PHAssetResourceCreationOptions()
+                    options.shouldMoveFile = true
+                    PHAssetCreationRequest.forAsset().addResource(with: .video, fileURL: url, options: options)
+                }) { ok, _ in
+                    guard ok else {
+                        try? FileManager.default.removeItem(at: url)
+                        self.finishOne(toast: String(localized: "Salvataggio non riuscito."))
+                        return
+                    }
+                    DispatchQueue.main.async {
+                        self.lastPhoto = thumb
+                        self.saveCounter += 1
+                        self.pendingCount = max(0, self.pendingCount - 1)
+                    }
+                }
+            }
         }
     }
 }
