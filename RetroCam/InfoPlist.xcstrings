@@ -8,7 +8,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Lumora"
+            "value" : "LumenCam"
           }
         }
       }
@@ -31,25 +31,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora verwendet die Kamera, um den Sucher mit Retro-Filtern in Echtzeit anzuzeigen und Fotos aufzunehmen."
+            "value" : "LumenCam verwendet die Kamera, um den Sucher mit Retro-Filtern in Echtzeit anzuzeigen und Fotos aufzunehmen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora uses the camera to show the viewfinder with retro filters in real time and to take photos."
+            "value" : "LumenCam uses the camera to show the viewfinder with retro filters in real time and to take photos."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora usa la cámara para mostrar el visor con filtros retro en tiempo real y hacer fotos."
+            "value" : "LumenCam usa la cámara para mostrar el visor con filtros retro en tiempo real y hacer fotos."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora utilise l'appareil photo pour afficher le viseur avec des filtres rétro en temps réel et prendre des photos."
+            "value" : "LumenCam utilise l'appareil photo pour afficher le viseur avec des filtres rétro en temps réel et prendre des photos."
           }
         }
       }
@@ -61,7 +61,7 @@
         "it" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Lumora usa il microfono per registrare l'audio dei video retrò."
+            "value" : "LumenCam usa il microfono per registrare l'audio dei video retrò."
           }
         }
       }
@@ -72,25 +72,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora sichert deine Fotos in der Fotomediathek."
+            "value" : "LumenCam sichert deine Fotos in der Fotomediathek."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora saves your photos to the Photos library."
+            "value" : "LumenCam saves your photos to the Photos library."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora guarda tus fotos en la fototeca."
+            "value" : "LumenCam guarda tus fotos en la fototeca."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora enregistre vos photos dans la photothèque."
+            "value" : "LumenCam enregistre vos photos dans la photothèque."
           }
         }
       }

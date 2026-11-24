@@ -116,7 +116,7 @@ struct CameraAccessView: View {
             Text("Serve l'accesso alla fotocamera")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.primary)
-            Text("Lumora usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni.")
+            Text("LumenCam usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)

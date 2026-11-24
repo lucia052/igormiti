@@ -1,4 +1,4 @@
-# RetroCam (Lumora)
+# LumenCam
 
 App iPhone (SwiftUI, iOS 17+, Liquid Glass su iOS 26+) con quattro fotocamere retrò in tempo reale: mirino filtrato, flash simulato con maschera persona, ghiera di messa a fuoco manuale, Live Photo, aptica.
 

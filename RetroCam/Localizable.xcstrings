@@ -112,31 +112,31 @@
         }
       }
     },
-    "Apre la fotocamera di Lumora." : {
+    "Apre la fotocamera di LumenCam." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Öffnet die Lumora-Kamera."
+            "value" : "Öffnet die LumenCam-Kamera."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opens the Lumora camera."
+            "value" : "Opens the LumenCam camera."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abre la cámara de Lumora."
+            "value" : "Abre la cámara de LumenCam."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvre l'appareil photo de Lumora."
+            "value" : "Ouvre l'appareil photo de LumenCam."
           }
         }
       }
@@ -170,31 +170,31 @@
         }
       }
     },
-    "Apri Lumora" : {
+    "Apri LumenCam" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora öffnen"
+            "value" : "LumenCam öffnen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open Lumora"
+            "value" : "Open LumenCam"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abrir Lumora"
+            "value" : "Abrir LumenCam"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrir Lumora"
+            "value" : "Ouvrir LumenCam"
           }
         }
       }
@@ -739,31 +739,31 @@
     "Luminosità" : {
 
     },
-    "Lumora usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni." : {
+    "LumenCam usa la fotocamera per mostrare il mirino con i filtri in tempo reale. Puoi attivarla nelle Impostazioni." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora verwendet die Kamera, um den Sucher mit Filtern in Echtzeit anzuzeigen. Du kannst den Zugriff in den Einstellungen aktivieren."
+            "value" : "LumenCam verwendet die Kamera, um den Sucher mit Filtern in Echtzeit anzuzeigen. Du kannst den Zugriff in den Einstellungen aktivieren."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora uses the camera to show the viewfinder with filters in real time. You can turn it on in Settings."
+            "value" : "LumenCam uses the camera to show the viewfinder with filters in real time. You can turn it on in Settings."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora usa la cámara para mostrar el visor con los filtros en tiempo real. Puedes activarla en Ajustes."
+            "value" : "LumenCam usa la cámara para mostrar el visor con los filtros en tiempo real. Puedes activarla en Ajustes."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lumora utilise l'appareil photo pour afficher le viseur avec les filtres en temps réel. Vous pouvez l'activer dans Réglages."
+            "value" : "LumenCam utilise l'appareil photo pour afficher le viseur avec les filtres en temps réel. Vous pouvez l'activer dans Réglages."
           }
         }
       }

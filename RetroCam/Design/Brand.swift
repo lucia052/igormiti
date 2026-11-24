@@ -19,7 +19,7 @@ enum Brand {
         startPoint: .topLeading, endPoint: .bottomTrailing)
 
     /// Nome dell'app, inciso come su una targhetta di fotocamera.
-    static let name = "LUMORA"
+    static let name = "LumenCam"
 
     /// Carattere per i dati tecnici (ƒ/, tempi, zoom): monospaziato, come il resto del mirino.
     static func mono(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
@@ -118,7 +118,7 @@ struct BrandMark: View {
                 .foregroundStyle(Brand.metal)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: "Lumora"))
+        .accessibilityLabel(Text(verbatim: "LumenCam"))
     }
 }
 
